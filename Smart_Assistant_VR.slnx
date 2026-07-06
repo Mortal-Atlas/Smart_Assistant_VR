@@ -64,7 +64,6 @@
   <Project Path="Unity.RenderPipelines.Universal.Runtime.csproj" />
   <Project Path="Meta.Wit.Composer.csproj" />
   <Project Path="Oculus.Interaction.Editor.csproj" />
-  <Project Path="Unity.UnifiedRayTracing.Runtime.csproj" />
   <Project Path="UnityEditor.TestRunner.csproj" />
   <Project Path="Oculus.Interaction.OVR.csproj" />
   <Project Path="Unity.AI.Navigation.Editor.ConversionSystem.csproj" />
@@ -82,8 +81,8 @@
   <Project Path="Unity.XR.CompositionLayers.UIInteraction.csproj" />
   <Project Path="Unity.TextMeshPro.Editor.csproj" />
   <Project Path="AssistantCoreSDKRuntime.csproj" />
-  <Project Path="Unity.AppUI.Navigation.Editor.csproj" />
   <Project Path="Meta.XR.Audio.Editor.csproj" />
+  <Project Path="Unity.Rendering.LightTransport.Runtime.csproj" />
   <Project Path="Unity.XR.CompositionLayers.csproj" />
   <Project Path="Oculus.Interaction.OVR.Editor.csproj" />
   <Project Path="Unity.XR.CompositionLayers.Editor.csproj" />
@@ -105,7 +104,6 @@
   <Project Path="Unity.Performance.Profile-Analyzer.Editor.csproj" />
   <Project Path="Oculus.Interaction.OVR.Samples.csproj" />
   <Project Path="UnityEditor.UI.csproj" />
-  <Project Path="Unity.RenderPipelines.Universal.2D.Editor.Overrides.csproj" />
   <Project Path="VoiceSDK.Dictation.Runtime.csproj" />
   <Project Path="Meta.XR.Editor.PlayCompanion.csproj" />
   <Project Path="Meta.XR.Editor.Reflection.csproj" />
@@ -170,7 +168,6 @@
   <Project Path="UnityEditor.XR.LegacyInputHelpers.csproj" />
   <Project Path="Unity.ShaderGraph.Utilities.csproj" />
   <Project Path="Meta.XR.BuildingBlocks.DepthAPI.csproj" />
-  <Project Path="Unity.AppUI.Redux.Editor.csproj" />
   <Project Path="Meta.WitAi.TTS.Editor.csproj" />
   <Project Path="Meta.XR.EnvironmentDepth.Editor.csproj" />
   <Project Path="Oculus.Interaction.Samples.Editor.UISet.csproj" />
@@ -199,16 +196,16 @@
   <Project Path="UnityEngine.XR.LegacyInputHelpers.csproj" />
   <Project Path="Unity.XR.OpenXR.Features.RuntimeDebugger.Editor.csproj" />
   <Project Path="Meta.XR.Editor.StatusMenu.csproj" />
+  <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
-  <Project Path="Unity.InternalAPIEngineBridge.004.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.InferenceEngine.MacBLAS.csproj" />
   <Project Path="Unity.XR.ARAnalytics.Editor.csproj" />
   <Project Path="Unity.AppUI.InternalAPIBridge.csproj" />
+  <Project Path="Unity.AppUI.Navigation.Editor.csproj" />
   <Project Path="Meta.XR.Editor.EditorCoroutine.csproj" />
-  <Project Path="Unity.RenderPipelines.Core.Editor.Shared.csproj" />
   <Project Path="Unity.XR.ARFoundation.InternalUtils.Editor.csproj" />
   <Project Path="Meta.Net.endel.nativewebsocket.csproj" />
   <Project Path="Meta.Voice.Opus.csproj" />
@@ -221,12 +218,12 @@
   <Project Path="Unity.XR.OpenXR.Features.MockRuntime.csproj" />
   <Project Path="UnityEditor.SpatialTracking.csproj" />
   <Project Path="AssistantVoiceCommandCommon.Editor.csproj" />
-  <Project Path="Unity.Rendering.LightTransport.Editor.csproj" />
   <Project Path="Unity.Collections.Editor.csproj" />
   <Project Path="VoiceSDK.Runtime.Composer.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Config.Runtime.csproj" />
   <Project Path="Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.csproj" />
   <Project Path="Unity.RenderPipelines.Core.ShaderLibrary.csproj" />
   <Project Path="Unity.XR.OpenXR.Features.OculusQuestSupport.csproj" />
+  <Project Path="Unity.RenderPipelines.Core.Editor.Shared.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.Hands.Editor.csproj" />
 </Solution>
