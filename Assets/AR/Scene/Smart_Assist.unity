@@ -5417,6 +5417,7 @@ GameObject:
   - component: {fileID: 833452135}
   - component: {fileID: 833452137}
   - component: {fileID: 833452136}
+  - component: {fileID: 833452138}
   m_Layer: 0
   m_Name: '[BuildingBlock] ISDK_PokeInteraction'
   m_TagString: Untagged
@@ -5605,6 +5606,55 @@ MonoBehaviour:
   installationRoutineCheckpoint:
     _installationRoutineId: c88fc9f2-e9d1-41ea-b937-cdaf92a806d0
     _installationVariants: []
+--- !u!114 &833452138
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 833452134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1464721f2283eb14e94a33e812b47be4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _interactableView: {fileID: 833452136}
+  _whenHover:
+    m_PersistentCalls:
+      m_Calls: []
+  _whenUnhover:
+    m_PersistentCalls:
+      m_Calls: []
+  _whenSelect:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 1576822837}
+        m_TargetAssemblyTypeName: ArtemisButton, Assembly-CSharp
+        m_MethodName: ToggleSwitch
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  _whenUnselect:
+    m_PersistentCalls:
+      m_Calls: []
+  _whenInteractorViewAdded:
+    m_PersistentCalls:
+      m_Calls: []
+  _whenInteractorViewRemoved:
+    m_PersistentCalls:
+      m_Calls: []
+  _whenSelectingInteractorViewAdded:
+    m_PersistentCalls:
+      m_Calls: []
+  _whenSelectingInteractorViewRemoved:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &841781520
 GameObject:
   m_ObjectHideFlags: 0
@@ -7427,6 +7477,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1148034828}
   - component: {fileID: 1148034827}
+  - component: {fileID: 1148034829}
   m_Layer: 0
   m_Name: MQTT_manager
   m_TagString: Untagged
@@ -7446,7 +7497,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a07e1522ea617e546ad6df6d7f2a0bdc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  brokerAddress: 10.20.25.30
+  brokerAddress: 192.168.1.127
   brokerPort: 1883
   isEncrypted: 0
   connectionDelay: 500
@@ -7469,6 +7520,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1148034829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148034825}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e5a53a059666894fa29bb6beeeaf308, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  brokerAddress: 192.168.1.127
+  brokerPort: 1883
+  isEncrypted: 0
+  connectionDelay: 500
+  timeoutOnConnection: 2000
+  autoConnect: 1
+  mqttUserName: unity_user
+  mqttPassword: 12345
 --- !u!1 &1154620587
 GameObject:
   m_ObjectHideFlags: 0
@@ -8870,6 +8941,7 @@ GameObject:
   - component: {fileID: 1576822833}
   - component: {fileID: 1576822832}
   - component: {fileID: 1576822831}
+  - component: {fileID: 1576822837}
   m_Layer: 0
   m_Name: ButtonVisual
   m_TagString: Untagged
@@ -9123,6 +9195,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _pokeInteractable: {fileID: 833452136}
   _buttonBaseTransform: {fileID: 1999685416}
+--- !u!114 &1576822837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1576822829}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b4045e0a86cfb0478368ed09408a8c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mqttManager: {fileID: 1148034827}
+  topic: vr/artemis/toggle
 --- !u!1 &1587493145
 GameObject:
   m_ObjectHideFlags: 0
@@ -11654,7 +11740,7 @@ MonoBehaviour:
   _monoscopic: 0
   _sharpenType: 0
   _disableRecording: 0
-  _enableDynamicResolution: 0
+  _enableDynamicResolution: 1
   minDynamicResolutionScale: 1
   maxDynamicResolutionScale: 1
   quest2MinDynamicResolutionScale: 0.7
@@ -11709,9 +11795,9 @@ MonoBehaviour:
   requestBodyTrackingPermissionOnStartup: 0
   requestFaceTrackingPermissionOnStartup: 0
   requestEyeTrackingPermissionOnStartup: 0
-  requestScenePermissionOnStartup: 0
+  requestScenePermissionOnStartup: 1
   requestRecordAudioPermissionOnStartup: 0
-  requestPassthroughCameraAccessPermissionOnStartup: 0
+  requestPassthroughCameraAccessPermissionOnStartup: 1
   _localDimming: 1
   _trackingOriginType: 1
   usePositionTracking: 1
@@ -12792,11 +12878,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2047434299618623707, guid: 06e7f043678833c4b98693c2987fe982, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0.206
+      value: 0.077
       objectReference: {fileID: 0}
     - target: {fileID: 2047434299618623707, guid: 06e7f043678833c4b98693c2987fe982, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.207
+      value: -0.255
       objectReference: {fileID: 0}
     - target: {fileID: 3609519569703006168, guid: 06e7f043678833c4b98693c2987fe982, type: 3}
       propertyPath: m_LocalPosition.x
