@@ -12651,7 +12651,6 @@ GameObject:
   - component: {fileID: 2078912929}
   - component: {fileID: 2078912928}
   - component: {fileID: 2078912927}
-  - component: {fileID: 2078912926}
   m_Layer: 0
   m_Name: '[BuildingBlock] Environment Raycast Manager'
   m_TagString: Untagged
@@ -12659,22 +12658,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &2078912926
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2078912925}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 71a155ece80369d4e99bdaf5e59169b5, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _occlusionShadersMode: 2
-  _removeHands: 0
-  CustomTrackingSpace: {fileID: 0}
-  <MaskMeshFilters>k__BackingField: []
 --- !u!114 &2078912927
 MonoBehaviour:
   m_ObjectHideFlags: 0
