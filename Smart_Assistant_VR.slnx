@@ -117,6 +117,7 @@
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.Hands.csproj" />
   <Project Path="meta.xr.ai.mcpbridge.editor.csproj" />
   <Project Path="Unity.AppUI.MVVM.csproj" />
+  <Project Path="Unity.2D.Sprite.Editor.csproj" />
   <Project Path="Unity.InternalAPIEditorBridge.007.csproj" />
   <Project Path="Unity.XR.OpenXR.Editor.csproj" />
   <Project Path="meta.xr.ai.agentbridge.csproj" />
