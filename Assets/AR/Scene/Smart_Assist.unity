@@ -1031,8 +1031,7 @@ Transform:
   m_LocalPosition: {x: 0.49500006, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 1583150188}
+  m_Children: []
   m_Father: {fileID: 2099977311}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &631501102
@@ -3010,16 +3009,16 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1583150187}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1.2599995}
-  m_LocalScale: {x: 0.90666664, y: 0.08, z: 0.080000006}
+  m_LocalPosition: {x: 0, y: 0, z: -1.7}
+  m_LocalScale: {x: 0.08, y: 0.1333333, z: 0.1333333}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 615893142}
+  m_Father: {fileID: 2099977311}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -11.2, y: -0.397}
-  m_SizeDelta: {x: 26.2, y: 5}
+  m_AnchoredPosition: {x: 0.42, y: -0.553}
+  m_SizeDelta: {x: 21, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1583150189
 MonoBehaviour:
@@ -3077,7 +3076,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -3109,7 +3108,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 0, w: 3.3594446}
+  m_margin: {x: 0, y: 0, z: 10.570958, w: 3.3594446}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   _SortingLayer: 0
@@ -3211,7 +3210,7 @@ GameObject:
   - component: {fileID: 1901031199}
   - component: {fileID: 1901031198}
   m_Layer: 0
-  m_Name: Moon Text
+  m_Name: Weather Condition
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3225,15 +3224,15 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1901031196}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1.87}
-  m_LocalScale: {x: 0.040799998, y: 0.08, z: 0.08}
+  m_LocalPosition: {x: 0, y: 0, z: -1.31}
+  m_LocalScale: {x: 0.06, y: 0.06, z: 0.06}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 2099977311}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.0192, y: 0.18}
+  m_AnchoredPosition: {x: 0.016, y: 0.21}
   m_SizeDelta: {x: 10.6, y: 5}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1901031198
@@ -3256,7 +3255,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Moon text
+  m_text: 'Weather Condition
 
 '
   m_isRightToLeft: 0
@@ -3553,6 +3552,7 @@ Transform:
   - {fileID: 789389703}
   - {fileID: 615893142}
   - {fileID: 1901031197}
+  - {fileID: 1583150188}
   m_Father: {fileID: 3609519569387920498}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2099977312
@@ -3570,6 +3570,7 @@ MonoBehaviour:
   mqttManager: {fileID: 1148034827}
   topic: vr/environment/update
   tempText: {fileID: 1583150189}
+  conditionText: {fileID: 1901031198}
   spacing: 0.25
   zOffset: -1.37
   spriteScale: 0.1
@@ -3958,7 +3959,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1.241, z: 0.437}
-  m_LocalScale: {x: 0.76, y: 0.27, z: 0.03}
+  m_LocalScale: {x: 0.2, y: 0.2, z: 0.03}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7202295269660104134}

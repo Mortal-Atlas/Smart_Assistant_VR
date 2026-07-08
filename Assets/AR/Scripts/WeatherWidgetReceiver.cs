@@ -20,6 +20,7 @@ public class WeatherWidgetReceiver : MonoBehaviour
 
     [Header("UI Display")]
     public TextMeshPro tempText;
+    public TextMeshPro conditionText;
 
     [Header("Layout Settings")]
     public float spacing = 0.5f;
@@ -100,6 +101,7 @@ public class WeatherWidgetReceiver : MonoBehaviour
         Debug.Log($"Rika says: Updating UI with Temp: {data.temp}, Condition: {data.condition}");
 
         if (tempText != null) tempText.text = data.temp.ToString("F1") + "°";
+        if (conditionText != null) conditionText.text = data.condition;
 
         if (forecastAnchors.Length > 0 && forecastAnchors[0] != null)
         {
