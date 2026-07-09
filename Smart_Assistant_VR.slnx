@@ -92,6 +92,7 @@
   <Project Path="Meta.XR.Editor.Tags.csproj" />
   <Project Path="Unity.TestTools.CodeCoverage.Editor.OpenCover.Mono.Reflection.csproj" />
   <Project Path="Meta.XR.ImmersiveDebugger.DevAgent.csproj" />
+  <Project Path="Unity.Mobile.AndroidLogcat.Editor.csproj" />
   <Project Path="Unity.Rider.Editor.csproj" />
   <Project Path="Unity.XR.ARFoundation.VisualScripting.csproj" />
   <Project Path="Meta.XR.Editor.TelemetryUI.csproj" />
@@ -187,6 +188,7 @@
   <Project Path="Meta.XR.Editor.UPST.Notifications.csproj" />
   <Project Path="Oculus.Interaction.Samples.Editor.csproj" />
   <Project Path="Unity.RenderPipeline.Universal.ShaderLibrary.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.InferenceEngine.Editor.csproj" />
   <Project Path="Meta.XR.RuntimeOptimizer.csproj" />
   <Project Path="Meta.XR.Editor.Callbacks.csproj" />
@@ -201,7 +203,6 @@
   <Project Path="Unity.InputSystem.DocCodeSamples.csproj" />
   <Project Path="Unity.RenderPipelines.Universal.Shaders.csproj" />
   <Project Path="Unity.RenderPipelines.Core.Runtime.Shared.csproj" />
-  <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Unity.InferenceEngine.MacBLAS.csproj" />
   <Project Path="Unity.XR.ARAnalytics.Editor.csproj" />
   <Project Path="Unity.AppUI.InternalAPIBridge.csproj" />

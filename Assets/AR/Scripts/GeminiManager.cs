@@ -9,7 +9,7 @@ public class GeminiManager : MonoBehaviour
 {
     [Header("API Settings")]
     [Tooltip("Make sure to paste your key here in the Unity Inspector!")]
-    [SerializeField] private string apiKey = "API_KEY_HERE";
+    [SerializeField] private string apiKey = "AQ.Ab8RN6JNtkXgmQhz5LFTarXSa6DpVoPR5GHFzzlcdpMeMO0N8w";
     
     // Using the standard fast model for text/multimodal tasks
     private string baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
