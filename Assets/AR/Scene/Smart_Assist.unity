@@ -201,9 +201,9 @@ MonoBehaviour:
   onTranscript:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1203707714}
-        m_TargetAssemblyTypeName: RikaWakeWord, Assembly-CSharp
-        m_MethodName: ProcessIncomingSpeech
+      - m_Target: {fileID: 1203707711}
+        m_TargetAssemblyTypeName: GeminiManager, Assembly-CSharp
+        m_MethodName: OnTranscriptionReceived
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -1441,22 +1441,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ecebd4e4846bbd4589295fa3324ca65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1203707714
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 508765400}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35f0828c66f5a1848b6f4b91ac52f562, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  geminiManager: {fileID: 1203707711}
-  sttAgent: {fileID: 157779777}
-  wakeWord: apollo
-  gracePeriod: 1
 --- !u!1 &1413431182
 GameObject:
   m_ObjectHideFlags: 0
@@ -2245,6 +2229,10 @@ PrefabInstance:
     - target: {fileID: 1124358245331403748, guid: e5909ab7f9f463342a67c59363de5d1b, type: 3}
       propertyPath: m_Name
       value: Poke Interaction
+      objectReference: {fileID: 0}
+    - target: {fileID: 1124358245331403748, guid: e5909ab7f9f463342a67c59363de5d1b, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2346575210745227626, guid: e5909ab7f9f463342a67c59363de5d1b, type: 3}
       propertyPath: mqttManager
@@ -3098,9 +3086,9 @@ MonoBehaviour:
   _whenSelect:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1203707714}
+      - m_Target: {fileID: 508765400}
         m_TargetAssemblyTypeName: RikaWakeWord, Assembly-CSharp
-        m_MethodName: ToggleListening
+        m_MethodName: 
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -3238,6 +3226,18 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 609451438}
     - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: mqttPassword
+      value: 12345
+      objectReference: {fileID: 0}
+    - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: mqttUsername
+      value: rika
+      objectReference: {fileID: 0}
+    - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: brokerIPAddress
+      value: 192.168.1.127
+      objectReference: {fileID: 0}
+    - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: OnRikaResponds.m_PersistentCalls.m_Calls.Array.size
       value: 1
       objectReference: {fileID: 0}
@@ -3292,10 +3292,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4728579625766393085, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1203707714}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
