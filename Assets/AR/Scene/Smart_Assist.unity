@@ -1454,6 +1454,41 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sttAgent: {fileID: 157779777}
+--- !u!114 &1203707717
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508765400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c3e1ae009837d74bb73c941e811d9ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  avatarModel: {fileID: 1185469109733982300}
+  poofParticles: {fileID: 0}
+--- !u!114 &1203707718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508765400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95a1b055eaa049049aae3bda31075fa9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  brokerAddress: 100.98.214.51
+  brokerPort: 1883
+  isEncrypted: 0
+  connectionDelay: 500
+  timeoutOnConnection: 30000
+  autoConnect: 1
+  mqttUserName: unity_user
+  mqttPassword: 12345
+  rikaAgent: {fileID: 1203707717}
 --- !u!1 &1413431182
 GameObject:
   m_ObjectHideFlags: 0
@@ -2457,6 +2492,11 @@ MonoBehaviour:
   _planeSurface: {fileID: 1542449758550474658}
   _clippers:
   - {fileID: 7787536460293457848}
+--- !u!1 &1185469109733982300 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8203409824120674086, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+  m_PrefabInstance: {fileID: 2054199118617643031}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1426584413828479819
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2692,6 +2732,67 @@ MonoBehaviour:
     ReEnterDistance: 0.02
   _closeDistanceThreshold: 0.001
   _tiebreakerScore: 0
+--- !u!1001 &2054199118617643031
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.012
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.664
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1360813239356184213, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8203409824120674086, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_Name
+      value: kindred
+      objectReference: {fileID: 0}
+    - target: {fileID: 8203409824120674086, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 37ce38401c551884cbec5f2ce3f91a50, type: 3}
 --- !u!4 &2612859305848734134
 Transform:
   m_ObjectHideFlags: 0
@@ -3228,7 +3329,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4774054494377544874, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: brokerAddress
-      value: 192.168.1.127
+      value: 100.98.214.51
       objectReference: {fileID: 0}
     - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: apiKey
@@ -3248,7 +3349,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: brokerIPAddress
-      value: 192.168.1.127
+      value: 100.98.214.51
       objectReference: {fileID: 0}
     - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: OnRikaResponds.m_PersistentCalls.m_Calls.Array.size
@@ -3309,6 +3410,12 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4728579625766393085, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1203707714}
+    - targetCorrespondingSourceObject: {fileID: 4728579625766393085, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1203707718}
+    - targetCorrespondingSourceObject: {fileID: 4728579625766393085, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1203707717}
   m_SourcePrefab: {fileID: 100100000, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -3327,3 +3434,4 @@ SceneRoots:
   - {fileID: 157779779}
   - {fileID: 375284849}
   - {fileID: 8720841501416279198}
+  - {fileID: 2054199118617643031}

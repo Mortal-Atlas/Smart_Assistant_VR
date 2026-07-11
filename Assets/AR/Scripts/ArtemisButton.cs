@@ -74,6 +74,7 @@ public void ReconnectMQTT()
         60                  // Keep Alive
     );
     
+    
     Debug.Log("MQTT Reconnected with Persistent Session.");
 }
 }
