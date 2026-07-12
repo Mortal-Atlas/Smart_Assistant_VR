@@ -12,6 +12,10 @@ GameObject:
   - component: {fileID: 4982274987513003921}
   - component: {fileID: 6503034398214984880}
   - component: {fileID: 4774054494377544874}
+  - component: {fileID: 4211620810011229035}
+  - component: {fileID: 5517693541142883412}
+  - component: {fileID: 316047760019531719}
+  - component: {fileID: 4469234203989022732}
   m_Layer: 0
   m_Name: Manager
   m_TagString: Untagged
@@ -58,7 +62,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ecebd4e4846bbd4589295fa3324ca65, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  apiKey: AQ.Ab8RN6Je9KBJyscDkaDduWwtPOZ5YYdxaglVIjN7tXzLUY5K7A
+  brokerIPAddress: 100.98.214.51
+  brokerPort: 1883
+  mqttUsername: rika
+  mqttPassword: 12345
+  ttsAgent: {fileID: 0}
 --- !u!114 &4774054494377544874
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -71,11 +79,75 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a07e1522ea617e546ad6df6d7f2a0bdc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  brokerAddress: 192.168.1.127
+  brokerAddress: 100.98.214.51
   brokerPort: 1883
   isEncrypted: 0
   connectionDelay: 500
   timeoutOnConnection: 2000
   autoConnect: 0
   mqttUserName: unity_user
+  mqttPassword: 12345
+--- !u!114 &4211620810011229035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4728579625766393085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69f5a5f743c4ee9429e3dda1d7290211, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sttAgent: {fileID: 0}
+--- !u!114 &5517693541142883412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4728579625766393085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95a1b055eaa049049aae3bda31075fa9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  brokerAddress: 100.98.214.51
+  brokerPort: 1883
+  isEncrypted: 0
+  connectionDelay: 500
+  timeoutOnConnection: 30000
+  autoConnect: 1
+  mqttUserName: unity_user
+  mqttPassword: 12345
+  rikaAgent: {fileID: 316047760019531719}
+--- !u!114 &316047760019531719
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4728579625766393085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c3e1ae009837d74bb73c941e811d9ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  avatarModel: {fileID: 0}
+  poofParticles: {fileID: 7767824807863388181, guid: eb7c3a6602f2890478e78cd3ddf876fa, type: 3}
+--- !u!114 &4469234203989022732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4728579625766393085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45993d6467c989e4d9075af05df7be33, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  brokerIpAddress: 100.98.214.51
+  brokerPort: 1883
+  mqttUsername: unity_user
   mqttPassword: 12345

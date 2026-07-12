@@ -1,6 +1,7 @@
 using UnityEngine;
 using M2MqttUnity;
 using uPLibrary.Networking.M2Mqtt.Messages;
+using System.Threading.Tasks; // Required to push network calls to the background
 
 [System.Serializable]
 public class RikaCommand
@@ -14,7 +15,36 @@ public class MqttQuestBridge : M2MqttUnityClient
     [Tooltip("Drag the GameObject with the RikaAgent script here")]
     public RikaAgent rikaAgent; 
 
-    // NOTICE: I deleted the two 'brokerAddress' variables here! 
+    // Override Start to intercept the base class's blocking auto-connect behavior
+    protected override void Start()
+    {
+        // 1. Save whatever you set "Auto Connect" to in the Inspector
+        bool shouldAutoConnect = autoConnect; 
+        
+        // 2. Temporarily turn it off so base.Start() doesn't freeze the Quest's main thread
+        autoConnect = false; 
+        base.Start(); 
+        
+        // 3. Put it back to its original state
+        autoConnect = shouldAutoConnect;
+
+        // 4. If we want to connect on start, do it in a BACKGROUND TASK
+        if (autoConnect)
+        {
+            Task.Run(() => 
+            {
+                try 
+                {
+                    Debug.Log("Attempting background MQTT connection to prevent VR freeze...");
+                    base.Connect(); // Safe to call here, it won't block rendering
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("Background MQTT Connection Failed: " + e.Message);
+                }
+            });
+        }
+    }
 
     protected override void OnConnected()
     {
