@@ -16,6 +16,7 @@ GameObject:
   - component: {fileID: 5517693541142883412}
   - component: {fileID: 316047760019531719}
   - component: {fileID: 4469234203989022732}
+  - component: {fileID: 860824150314985939}
   m_Layer: 0
   m_Name: Manager
   m_TagString: Untagged
@@ -84,7 +85,7 @@ MonoBehaviour:
   isEncrypted: 0
   connectionDelay: 500
   timeoutOnConnection: 2000
-  autoConnect: 0
+  autoConnect: 1
   mqttUserName: unity_user
   mqttPassword: 12345
 --- !u!114 &4211620810011229035
@@ -121,6 +122,7 @@ MonoBehaviour:
   mqttUserName: unity_user
   mqttPassword: 12345
   rikaAgent: {fileID: 316047760019531719}
+  imageTrackerHandler: {fileID: 0}
 --- !u!114 &316047760019531719
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -151,3 +153,40 @@ MonoBehaviour:
   brokerPort: 1883
   mqttUsername: unity_user
   mqttPassword: 12345
+--- !u!114 &860824150314985939
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4728579625766393085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf20233de47fb84458cdbb221ee9baef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  brokerAddress: 100.98.214.51
+  brokerPort: 1883
+  isEncrypted: 0
+  connectionDelay: 500
+  timeoutOnConnection: 30000
+  autoConnect: 1
+  mqttUserName: unity_user
+  mqttPassword: 12345
+  cursorVisual: {fileID: 0}
+  screenPhysicalSize: {x: 0.162, y: 0.079}
+  currentMode: 0
+  spotifyPanel: {fileID: 0}
+  combatPanel: {fileID: 0}
+  scannerPanel: {fileID: 0}
+  aiChatPanel: {fileID: 0}
+  tomodatchiPanel: {fileID: 0}
+  micIndicator: {fileID: 0}
+  petState:
+    hunger: 50
+    apples: 5
+    sushi: 2
+    candy: 10
+  chatHistoryText: {fileID: 0}
+  currentMessageText: {fileID: 0}
+  typingSpeed: 0.33
