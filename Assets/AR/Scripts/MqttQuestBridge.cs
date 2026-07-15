@@ -1,6 +1,7 @@
 using UnityEngine;
 using M2MqttUnity;
 using uPLibrary.Networking.M2Mqtt.Messages;
+using UnityEngine.InputSystem;
 
 [System.Serializable]
 public class RikaCommand
@@ -8,22 +9,26 @@ public class RikaCommand
     public string command;
 }
 
-[System.Serializable]
-public class PhonePoseData
-{
-    public float px, py, pz;
-    public float qx, qy, qz, qw;
-}
-
 public class MqttQuestBridge : M2MqttUnityClient
 {
     [Header("Rika Integration")]
     [Tooltip("Drag the GameObject with the RikaAgent script here")]
     public RikaAgent rikaAgent; 
+    
+    [Tooltip("Drag the GameObject with the RikaChatController script here")]
+    public RikaChatController chatController;
 
-    [Header("AR Tracking")]
-    [Tooltip("Drag the Manager object holding the ImageTrackerHandler here")]
-    public ImageTrackerHandler imageTrackerHandler;
+    [Header("Controls")]
+    [Tooltip("Input Action for Right Thumbstick Click (Press)")]
+    public InputActionReference rightThumbstickClick;
+    [Tooltip("Input Action for Right Thumbstick Axis (Vector2)")]
+    public InputActionReference rightThumbstickAxis;
+    
+    [Tooltip("How far the thumbstick must be pushed upon release to trigger an app switch (0.0 to 1.0)")]
+    public float thumbstickDeadzone = 0.5f;
+
+    // State tracking for the press-and-hold radial menu gesture
+    private bool wasPressingThumbstick = false;
 
     // We don't need to override Start with Task.Run anymore.
     // The base M2MqttUnityClient actually handles the threaded socket connection safely!
@@ -33,18 +38,99 @@ public class MqttQuestBridge : M2MqttUnityClient
         base.Start();
     }
 
+    protected override void Update()
+    {
+        base.Update(); // Required for M2MqttUnityClient network processing on main thread
+        HandleThumbstickInput();
+    }
+
+    private void HandleThumbstickInput()
+    {
+        if (rightThumbstickClick == null || rightThumbstickAxis == null) return;
+
+        // Read the current state of the thumbstick click and directional axis
+        bool isPressed = rightThumbstickClick.action.ReadValue<float>() > 0.5f;
+        Vector2 currentAxis = rightThumbstickAxis.action.ReadValue<Vector2>();
+
+        // 1. Just pressed down: Always prompt Rika immediately
+        if (isPressed && !wasPressingThumbstick)
+        {
+            ActivateRika();
+        }
+        // 2. Just released: Read the coordinate at the exact time of release
+        else if (!isPressed && wasPressingThumbstick)
+        {
+            if (currentAxis.magnitude > thumbstickDeadzone)
+            {
+                HandleDirectionalRelease(currentAxis);
+            }
+        }
+
+        wasPressingThumbstick = isPressed;
+    }
+
+    private void ActivateRika()
+    {
+        Debug.Log("Thumbstick Pressed: Activating Rika!");
+        if (rikaAgent != null)
+        {
+            rikaAgent.Materialize();
+        }
+        
+        // Optional: Immediately tell HAOS to start listening for voice dictation
+        if (client != null && client.IsConnected)
+        {
+            client.Publish("rika/voice/listen", System.Text.Encoding.UTF8.GetBytes("start"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+        }
+    }
+
+    private void HandleDirectionalRelease(Vector2 axis)
+    {
+        string appState = "Standby";
+
+        // Calculate the angle of the thumbstick (-180 to 180 degrees)
+        // 0 is Right, 90 is Forward(Up), 180/-180 is Left, -90 is Back(Down)
+        float angle = Mathf.Atan2(axis.y, axis.x) * Mathf.Rad2Deg;
+
+        // 8-Way Directional mapping
+        if (angle > -22.5f && angle <= 22.5f) 
+            appState = "Spotify"; // Right
+        else if (angle > 22.5f && angle <= 67.5f) 
+            appState = "App_ForwardRight"; // Forward-Right (Placeholder)
+        else if (angle > 67.5f && angle <= 112.5f) 
+            appState = "Combat"; // Forward
+        else if (angle > 112.5f && angle <= 157.5f) 
+            appState = "App_ForwardLeft"; // Forward-Left (Placeholder)
+        else if (angle > 157.5f || angle <= -157.5f) 
+            appState = "Scanner"; // Left
+        else if (angle > -157.5f && angle <= -112.5f) 
+            appState = "App_BackLeft"; // Back-Left (Placeholder)
+        else if (angle > -112.5f && angle <= -67.5f) 
+            appState = "Tomodatchi"; // Back
+        else if (angle > -67.5f && angle <= -22.5f) 
+            appState = "App_BackRight"; // Back-Right (Placeholder)
+
+        Debug.Log($"Thumbstick Released at angle {angle:F1}: Changing App State to {appState}");
+        
+        // Publish the state change to the MQTT broker so the UI Canvas (Phone) updates
+        if (client != null && client.IsConnected)
+        {
+            client.Publish("rika/app/switch", System.Text.Encoding.UTF8.GetBytes(appState), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+        }
+    }
+
     protected override void OnConnected()
     {
         base.OnConnected();
         
-        // Subscribe to the topic as soon as the connection is successful, adding the new pose topic
-        client.Subscribe(new string[] { "rika/commands", "rika/phone/pose" }, new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+        // Subscribed to "rika/voice/input" to capture what the user says for the scrollable chat log
+        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input" }, 
+            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         
         // Broadcast that the VR headset is online and RETAIN the message (the 'true' flag at the end)
-        // This solves your race condition! The broker holds this message for the phone when it joins.
         client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("online"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
         
-        Debug.Log("Connected to the Rika Message Bus! Waiting for commands and phone pose data...");
+        Debug.Log("Connected to the Rika Message Bus! Waiting for commands and responses...");
     }
 
     protected override void OnApplicationQuit()
@@ -60,36 +146,9 @@ public class MqttQuestBridge : M2MqttUnityClient
     protected override void DecodeMessage(string topic, byte[] message)
     {
         string msg = System.Text.Encoding.UTF8.GetString(message);
+        Debug.Log("Raw message received on " + topic + ": " + msg);
         
-        // We only log non-pose messages so we don't spam the console 60 times a second
-        if (topic != "rika/phone/pose")
-        {
-            Debug.Log("Raw message received on " + topic + ": " + msg);
-        }
-        
-        if (topic == "rika/phone/pose")
-        {
-            try
-            {
-                PhonePoseData pose = JsonUtility.FromJson<PhonePoseData>(msg);
-                if (imageTrackerHandler != null)
-                {
-                    Vector3 pos = new Vector3(pose.px, pose.py, pose.pz);
-                    Quaternion rot = new Quaternion(pose.qx, pose.qy, pose.qz, pose.qw);
-
-                    // Push to main thread since we are modifying transforms in the tracker handler
-                    UnityMainThreadDispatcher.Instance().Enqueue(() => 
-                    {
-                        imageTrackerHandler.UpdateFallbackSensorData(pos, rot);
-                    });
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("Failed to parse pose data: " + e.Message);
-            }
-        }
-        else if (topic == "rika/commands")
+        if (topic == "rika/commands")
         {
             try 
             {
@@ -105,10 +164,6 @@ public class MqttQuestBridge : M2MqttUnityClient
                             Debug.Log("Materializing Rika!");
                             rikaAgent.Materialize();
                         } 
-                        else 
-                        {
-                            Debug.LogError("Hey! You forgot to assign the RikaAgent in the Unity Inspector!");
-                        }
                     });
                 }
                 else if (data != null && data.command == "poof") 
@@ -127,6 +182,31 @@ public class MqttQuestBridge : M2MqttUnityClient
             catch (System.Exception e)
             {
                 Debug.LogError("Failed to parse the JSON command. Did you format it right? Error: " + e.Message);
+            }
+        } 
+        // --------------------------------------------------------
+        // CHAT LOGIC: Capturing both sides of the conversation
+        // --------------------------------------------------------
+        else if (topic == "rika/voice/input")
+        {
+            // This is the transcript of what the USER said.
+            if (chatController != null)
+            {
+                // Passing a formatted string so the ChatController can append it to the log
+                chatController.OnMqttMessageReceived("\n\nUser: " + msg);
+            }
+        }
+        else if (topic == "rika/response")
+        {
+            // This is Rika's AI reply.
+            if (chatController != null)
+            {
+                // The chat controller handles pushing to the main thread internally
+                chatController.OnMqttMessageReceived("\n\nRika: " + msg);
+            }
+            else
+            {
+                Debug.LogWarning("RikaChatController is not assigned in the Inspector on MqttQuestBridge!");
             }
         }
     }
