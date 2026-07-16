@@ -1,9 +1,7 @@
 using UnityEngine;
 using M2MqttUnity;
 using uPLibrary.Networking.M2Mqtt.Messages;
-using TMPro; // Required for TextMeshPro UI
-using System.Collections; // Required for Coroutines
-using System.Collections.Generic; // Required for Dictionaries
+using System.Collections.Generic;
 
 [System.Serializable]
 public class TouchPayload
@@ -12,7 +10,7 @@ public class TouchPayload
     public bool isTouching;
 }
 
-// --- NEW CLOUD SAVE DATA STRUCTURE ---
+// --- CLOUD SAVE DATA STRUCTURE ---
 [System.Serializable]
 public class TomodatchiState
 {
@@ -21,18 +19,7 @@ public class TomodatchiState
     public int sushi = 2;
     public int candy = 10;
 }
-// -------------------------------------
-
-public enum PhoneAppMode
-{
-    Standby,
-    PhoneOnly, // When you just want the physical phone, VR UI stays hidden
-    Spotify,
-    Combat,
-    Scanner,
-    AIChat,    // Our texting interface
-    Tomodatchi // The virtual pet app
-}
+// ---------------------------------
 
 public class VRPhoneReceiver : M2MqttUnityClient
 {
@@ -43,84 +30,55 @@ public class VRPhoneReceiver : M2MqttUnityClient
     [Tooltip("Physical dimensions of the S24 Ultra screen in meters (Width, Height)")]
     public Vector2 screenPhysicalSize = new Vector2(0.162f, 0.079f); // FLIPPED FOR LANDSCAPE
 
-    [Header("App States")]
-    public PhoneAppMode currentMode = PhoneAppMode.Standby;
-
-    [Header("Panels (Drag your Canvas UI Panels here)")]
-    public GameObject spotifyPanel;
-    public GameObject combatPanel;
-    public GameObject scannerPanel;
-    public GameObject aiChatPanel;
-    public GameObject tomodatchiPanel; 
-
-    [Header("Voice Commands")]
-    [Tooltip("UI Image of a microphone to show when Rika is listening")]
-    public GameObject micIndicator;
-    private bool isListening = false;
-
-    private System.Collections.Generic.Dictionary<string, PhoneAppMode> voiceCommands;
+    private Dictionary<string, string> voiceCommands;
 
     [Header("Inventory & Pet Status (Cloud Saved)")]
     public TomodatchiState petState = new TomodatchiState();
 
-    [Header("AI Chat Settings")]
-    public TextMeshProUGUI chatHistoryText;
-    public TextMeshProUGUI currentMessageText;
-    public float typingSpeed = 0.03f;
-
     // Internal state tracking
     private bool wasTouchingLastFrame = false;
-    private string fullChatHistory = "";
-    private Coroutine typingCoroutine;
+    private bool wasTriggerPulled = false;
+    private string currentAppMode = "Standby";
 
     protected override void Start()
     {
         base.Start(); // CRITICAL: M2Mqtt needs this!
 
-        if (micIndicator != null) micIndicator.SetActive(false);
-
-        // We initialize this for ALL platforms now, not just Windows!
-        voiceCommands = new Dictionary<string, PhoneAppMode>()
+        // Map spoken words to the App State strings used by AppStateManager
+        voiceCommands = new Dictionary<string, string>()
         {
-            { "standby", PhoneAppMode.Standby },
-            { "spotify", PhoneAppMode.Spotify },
-            { "music", PhoneAppMode.Spotify },
-            { "combat", PhoneAppMode.Combat },
-            { "fight", PhoneAppMode.Combat },
-            { "scan", PhoneAppMode.Scanner },
-            { "camera", PhoneAppMode.Scanner },
-            { "chat", PhoneAppMode.AIChat },
-            { "text", PhoneAppMode.AIChat },
-            { "pet", PhoneAppMode.Tomodatchi },
-            { "feed", PhoneAppMode.Tomodatchi }
+            { "standby", "Standby" },
+            { "spotify", "Spotify" },
+            { "music", "Spotify" },
+            { "combat", "Combat" },
+            { "fight", "Combat" },
+            { "scan", "Scanner" },
+            { "camera", "Scanner" },
+            { "chat", "AIChat" },
+            { "text", "AIChat" },
+            { "pet", "Tomodatchi" },
+            { "feed", "Tomodatchi" }
         };
     }
 
     protected override void Update()
     {
-        base.Update(); // CRITICAL: This processes the MQTT message queue!
+        base.Update(); // Required for M2Mqtt to process incoming messages on the main thread
 
-        // Detect right thumbstick click
-        if (OVRInput.GetDown(OVRInput.Button.PrimaryThumbstick, OVRInput.Controller.RTouch))
+        // Only listen for the trigger pull if we are actually in the Scanner app.
+        // I don't want you accidentally taking photos of your floor while feeding the pet.
+        if (currentAppMode == "Scanner")
         {
-            ToggleListening();
-        }
-    }
+            // OVRInput Triggers are axes (0.0 to 1.0). Checking the float is much more reliable than GetDown.
+            float triggerValue = OVRInput.Get(OVRInput.Axis1D.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
+            bool isTriggerPulled = triggerValue > 0.8f;
 
-    private void ToggleListening()
-    {
-        isListening = !isListening;
-        if (micIndicator != null) micIndicator.SetActive(isListening);
+            if (isTriggerPulled && !wasTriggerPulled)
+            {
+                TriggerScannerPhoto();
+            }
 
-        if (isListening)
-        {
-            Debug.Log("🎤 Telling HAOS/Pi to start listening...");
-            client.Publish("rika/voice/listen", System.Text.Encoding.UTF8.GetBytes("start"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-        }
-        else
-        {
-            Debug.Log("🔇 Telling HAOS/Pi to stop listening.");
-            client.Publish("rika/voice/listen", System.Text.Encoding.UTF8.GetBytes("stop"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+            wasTriggerPulled = isTriggerPulled;
         }
     }
 
@@ -132,12 +90,14 @@ public class VRPhoneReceiver : M2MqttUnityClient
             "rika/phone/touch",
             "rika/phone/command",
             "rika/pet/state", 
-            "rika/voice/input" // Listen for HAOS sending us the transcribed text!
+            "rika/voice/input", // Listen for HAOS sending us the transcribed text
+            "rika/app/switch"   // Listen to sync the current app mode
         }, new byte[] { 
             MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE,
             MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE,
             MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE,
-            MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE 
+            MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE,
+            MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE
         });
     }
 
@@ -147,7 +107,8 @@ public class VRPhoneReceiver : M2MqttUnityClient
 
         if (topic == "rika/phone/touch")
         {
-            ProcessTouchData(payloadString);
+            // Moving the cursor requires the main thread!
+            UnityMainThreadDispatcher.Instance().Enqueue(() => ProcessTouchData(payloadString));
         }
         else if (topic == "rika/phone/command")
         {
@@ -156,63 +117,69 @@ public class VRPhoneReceiver : M2MqttUnityClient
         else if (topic == "rika/pet/state")
         {
             petState = JsonUtility.FromJson<TomodatchiState>(payloadString);
-            Debug.Log($"💾 Rika Cloud Save Loaded: Hunger {petState.hunger}, Apples {petState.apples}");
+            Debug.Log($"[VRPhoneReceiver] Cloud Save Loaded: Hunger {petState.hunger}, Apples {petState.apples}");
         }
         else if (topic == "rika/voice/input")
         {
             ProcessVoiceInput(payloadString);
         }
+        else if (topic == "rika/app/switch")
+        {
+            // Sync our local state tracker whenever the radial menu or a voice command changes the app
+            currentAppMode = payloadString;
+            Debug.Log($"[VRPhoneReceiver] Internal state synced to: {currentAppMode}");
+        }
     }
 
     private void ProcessVoiceInput(string text)
     {
-        Debug.Log("🗣️ Rika heard via MQTT: " + text);
-        string lowerText = text.ToLower().Trim();
-
-        lowerText = lowerText.Replace(".", "").Replace("!", "").Replace("?", "");
+        Debug.Log("🗣️ Voice Transcript Received: " + text);
+        string lowerText = text.ToLower().Trim().Replace(".", "").Replace("!", "").Replace("?", "");
 
         if (voiceCommands.ContainsKey(lowerText))
         {
-            SwitchAppMode(voiceCommands[lowerText]);
+            // Publish globally to switch apps (MqttQuestBridge will catch this and update the UI)
+            SwitchAppModeGlobal(voiceCommands[lowerText]);
         }
         else
         {
-            if (currentMode != PhoneAppMode.AIChat) SwitchAppMode(PhoneAppMode.AIChat);
-            
-            fullChatHistory += "\n<color=#00ffff>You:</color> " + text + "\n";
-            if (chatHistoryText != null) chatHistoryText.text = fullChatHistory;
-            if (currentMessageText != null) currentMessageText.text = "...";
+            // Switch to Chat if it's just a normal conversation prompt
+            SwitchAppModeGlobal("AIChat");
 
-            // Fire it off to Gemini!
-            client.Publish("rika/chat/input", System.Text.Encoding.UTF8.GetBytes(text), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+            // Fire it off to the Python backend! (rika_brain.py listens on 'rika/prompt')
+            client.Publish("rika/prompt", System.Text.Encoding.UTF8.GetBytes(text), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
-
-        OVRInput.SetControllerVibration(0.5f, 0.3f, OVRInput.Controller.RTouch);
-        
-        // Auto-close the mic once we receive a result
-        if (isListening) ToggleListening(); 
     }
 
     private void ProcessTouchData(string json)
     {
         TouchPayload data = JsonUtility.FromJson<TouchPayload>(json);
 
-        if (cursorVisual == null || currentMode == PhoneAppMode.PhoneOnly) return;
+        if (cursorVisual == null) return;
 
-        bool isTapDown = data.isTouching && !wasTouchingLastFrame;
         bool isTapRelease = !data.isTouching && wasTouchingLastFrame;
 
         if (data.isTouching)
         {
+            // Show cursor and map coordinates
+            if (!cursorVisual.gameObject.activeSelf) cursorVisual.gameObject.SetActive(true);
+            
             float mappedX = (data.tx - 0.5f) * screenPhysicalSize.x;
             float mappedY = -(data.ty - 0.5f) * screenPhysicalSize.y;
             cursorVisual.localPosition = new Vector3(mappedX, mappedY, 0.002f); 
 
+            // Light vibration for dragging
             OVRInput.SetControllerVibration(0.1f, 0.1f, OVRInput.Controller.RTouch);
+        }
+        else
+        {
+            // Hide cursor when not touching
+            if (cursorVisual.gameObject.activeSelf) cursorVisual.gameObject.SetActive(false);
         }
 
         if (isTapRelease)
         {
+            // Hard vibration for physical click
             OVRInput.SetControllerVibration(1.0f, 0.5f, OVRInput.Controller.RTouch);
             AttemptPhysicalClick();
         }
@@ -222,21 +189,22 @@ public class VRPhoneReceiver : M2MqttUnityClient
 
     private void AttemptPhysicalClick()
     {
+        // Cast a tiny sphere at the cursor's location to detect UI BoxColliders
         Collider[] hitColliders = Physics.OverlapSphere(cursorVisual.position, 0.01f);
         foreach (var hit in hitColliders)
         {
-            Debug.Log("🦇 Rika clicked: " + hit.gameObject.name);
+            Debug.Log("[VRPhoneReceiver] Physical Click Detected on: " + hit.gameObject.name);
 
             // General Apps
             if (hit.gameObject.name == "Btn_FuriousSlash") ExecuteCombatMove("Furious Slash");
             if (hit.gameObject.name == "Btn_PlayPause") ToggleSpotify();
-            if (hit.gameObject.name == "Btn_TestChat") TriggerTestChat();
             
-            // App Navigation
-            if (hit.gameObject.name == "Btn_AppTomodatchi") SwitchAppMode(PhoneAppMode.Tomodatchi);
-            if (hit.gameObject.name == "Btn_AppCombat") SwitchAppMode(PhoneAppMode.Combat);
-            if (hit.gameObject.name == "Btn_AppScanner") SwitchAppMode(PhoneAppMode.Scanner);
-            if (hit.gameObject.name == "Btn_AppSpotify") SwitchAppMode(PhoneAppMode.Spotify);
+            // App Navigation (Sends global MQTT command instead of handling it locally)
+            if (hit.gameObject.name == "Btn_AppTomodatchi") SwitchAppModeGlobal("Tomodatchi");
+            if (hit.gameObject.name == "Btn_AppCombat") SwitchAppModeGlobal("Combat");
+            if (hit.gameObject.name == "Btn_AppScanner") SwitchAppModeGlobal("Scanner");
+            if (hit.gameObject.name == "Btn_AppSpotify") SwitchAppModeGlobal("Spotify");
+            if (hit.gameObject.name == "Btn_TestChat") SwitchAppModeGlobal("AIChat");
 
             // Tomodatchi Interactions
             if (hit.gameObject.name == "Btn_FeedApple") FeedTomodatchi("Apples", 10);
@@ -244,31 +212,14 @@ public class VRPhoneReceiver : M2MqttUnityClient
         }
     }
 
-    public void SwitchAppMode(PhoneAppMode newMode)
+    private void SwitchAppModeGlobal(string appName)
     {
-        currentMode = newMode;
+        currentAppMode = appName; // Set it locally instantly so we don't have to wait for the bounce-back
         
-        if (spotifyPanel != null) spotifyPanel.SetActive(false);
-        if (combatPanel != null) combatPanel.SetActive(false);
-        if (scannerPanel != null) scannerPanel.SetActive(false);
-        if (aiChatPanel != null) aiChatPanel.SetActive(false);
-        if (tomodatchiPanel != null) tomodatchiPanel.SetActive(false);
-        
-        if (cursorVisual != null) cursorVisual.gameObject.SetActive(true);
-
-        if (newMode == PhoneAppMode.PhoneOnly)
+        if (client != null && client.IsConnected)
         {
-            if (cursorVisual != null) cursorVisual.gameObject.SetActive(false);
-            return; 
+            client.Publish("rika/app/switch", System.Text.Encoding.UTF8.GetBytes(appName), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
         }
-
-        if (newMode == PhoneAppMode.Spotify && spotifyPanel != null) spotifyPanel.SetActive(true);
-        if (newMode == PhoneAppMode.Combat && combatPanel != null) combatPanel.SetActive(true);
-        if (newMode == PhoneAppMode.Scanner && scannerPanel != null) scannerPanel.SetActive(true);
-        if (newMode == PhoneAppMode.AIChat && aiChatPanel != null) aiChatPanel.SetActive(true);
-        if (newMode == PhoneAppMode.Tomodatchi && tomodatchiPanel != null) tomodatchiPanel.SetActive(true);
-
-        client.Publish("rika/phone/status", System.Text.Encoding.UTF8.GetBytes($"Mode changed to {newMode}"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
     }
 
     private void ProcessHAOSCommand(string command)
@@ -278,62 +229,16 @@ public class VRPhoneReceiver : M2MqttUnityClient
         if (command.StartsWith("SCAN_RESULT:"))
         {
             string geminiFact = command.Replace("SCAN_RESULT:", "");
-            // TODO: Update Scanner UI
+            // TODO: Update Scanner UI with my glorious analysis of your photo
         }
-        else if (command.StartsWith("AI_SAYS:"))
-        {
-            string reply = command.Replace("AI_SAYS:", "");
-            if (currentMode != PhoneAppMode.AIChat) SwitchAppMode(PhoneAppMode.AIChat);
-            ReceiveAIMessage(reply);
-        }
-    }
-
-    public void ReceiveAIMessage(string incomingMessage)
-    {
-        if (typingCoroutine != null)
-        {
-            StopCoroutine(typingCoroutine);
-            if (!string.IsNullOrEmpty(currentMessageText.text))
-            {
-                fullChatHistory += "\n<color=#ff00ff>Rika:</color> " + currentMessageText.text + "\n";
-            }
-        }
-        else if (!string.IsNullOrEmpty(currentMessageText.text))
-        {
-            fullChatHistory += "\n<color=#ff00ff>Rika:</color> " + currentMessageText.text + "\n";
-        }
-
-        if (chatHistoryText != null) chatHistoryText.text = fullChatHistory;
-        
-        typingCoroutine = StartCoroutine(TypewriterEffect(incomingMessage));
-    }
-
-    private IEnumerator TypewriterEffect(string message)
-    {
-        if (currentMessageText == null) yield break;
-
-        currentMessageText.text = "";
-        
-        foreach (char c in message)
-        {
-            currentMessageText.text += c;
-            
-            OVRInput.SetControllerVibration(0.1f, 0.1f, OVRInput.Controller.RTouch);
-            yield return new WaitForSeconds(typingSpeed);
-            OVRInput.SetControllerVibration(0, 0, OVRInput.Controller.RTouch);
-        }
-
-        typingCoroutine = null;
     }
 
     private void FeedTomodatchi(string foodName, int nutritionValue)
     {
-        if (currentMode != PhoneAppMode.Tomodatchi) return;
-
         bool hasFood = false;
         int remainingAmount = 0;
 
-        // Check our new cloud-syncable state
+        // Check our cloud-syncable state
         if (foodName == "Apples" && petState.apples > 0) { petState.apples--; hasFood = true; remainingAmount = petState.apples; }
         else if (foodName == "Sushi" && petState.sushi > 0) { petState.sushi--; hasFood = true; remainingAmount = petState.sushi; }
         else if (foodName == "Candy" && petState.candy > 0) { petState.candy--; hasFood = true; remainingAmount = petState.candy; }
@@ -342,7 +247,7 @@ public class VRPhoneReceiver : M2MqttUnityClient
         {
             petState.hunger = Mathf.Max(0, petState.hunger - nutritionValue); 
             
-            Debug.Log($"🍎 Fed {foodName}! Inventory left: {remainingAmount}. Hunger is now {petState.hunger}");
+            Debug.Log($"[VRPhoneReceiver] 🍎 Fed {foodName}! Inventory left: {remainingAmount}. Hunger is now {petState.hunger}");
             OVRInput.SetControllerVibration(0.5f, 0.2f, OVRInput.Controller.RTouch);
             
             // SAVE TO HAOS IMMEDIATELY!
@@ -350,7 +255,7 @@ public class VRPhoneReceiver : M2MqttUnityClient
         }
         else
         {
-            Debug.LogWarning($"❌ Tried to feed {foodName}, but inventory is empty!");
+            Debug.LogWarning($"[VRPhoneReceiver] ❌ Tried to feed {foodName}, but inventory is empty!");
             OVRInput.SetControllerVibration(0.1f, 0.5f, OVRInput.Controller.RTouch);
         }
     }
@@ -361,12 +266,6 @@ public class VRPhoneReceiver : M2MqttUnityClient
         // The 'true' at the end is the RETAIN flag! This tells the MQTT broker on your Pi 
         // to hold onto this message forever, acting as a free database.
         client.Publish("rika/pet/state", System.Text.Encoding.UTF8.GetBytes(saveJson), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-    }
-
-    private void TriggerTestChat()
-    {
-        SwitchAppMode(PhoneAppMode.AIChat);
-        ReceiveAIMessage("Ugh, fine. I live in LA, I'm over emails, but I guess I can text you. What do you want?");
     }
 
     private void ExecuteCombatMove(string moveName)
@@ -381,7 +280,8 @@ public class VRPhoneReceiver : M2MqttUnityClient
 
     public void TriggerScannerPhoto()
     {
-        if (currentMode != PhoneAppMode.Scanner) return;
+        Debug.Log("📸 SNAP! Telling the phone to take a picture.");
+        OVRInput.SetControllerVibration(1.0f, 0.8f, OVRInput.Controller.RTouch); // Big rumble for shutter click
         client.Publish("rika/phone/camera", System.Text.Encoding.UTF8.GetBytes("SNAP"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
     }
 }

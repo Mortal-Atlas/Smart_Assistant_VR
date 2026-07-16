@@ -18,6 +18,9 @@ public class MqttQuestBridge : M2MqttUnityClient
     [Tooltip("Drag the GameObject with the RikaChatController script here")]
     public RikaChatController chatController;
 
+    [Tooltip("Drag the GameObject with the AppStateManager script here")]
+    public AppStateManager appStateManager;
+
     [Header("Controls")]
     [Tooltip("Input Action for Right Thumbstick Click (Press)")]
     public InputActionReference rightThumbstickClick;
@@ -124,8 +127,9 @@ public class MqttQuestBridge : M2MqttUnityClient
         base.OnConnected();
         
         // Subscribed to "rika/voice/input" to capture what the user says for the scrollable chat log
-        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input" }, 
-            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+        // Added "rika/app/switch" to synchronize UI states
+        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input", "rika/app/switch" }, 
+            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         
         // Broadcast that the VR headset is online and RETAIN the message (the 'true' flag at the end)
         client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("online"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
@@ -208,6 +212,24 @@ public class MqttQuestBridge : M2MqttUnityClient
             {
                 Debug.LogWarning("RikaChatController is not assigned in the Inspector on MqttQuestBridge!");
             }
+        }
+        // --------------------------------------------------------
+        // APP STATE LOGIC: Switching the UI panels
+        // --------------------------------------------------------
+        else if (topic == "rika/app/switch")
+        {
+            // MUST push to main thread to modify GameObjects
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                if (appStateManager != null)
+                {
+                    appStateManager.SwitchApp(msg);
+                }
+                else
+                {
+                    Debug.LogWarning("AppStateManager is not assigned in the Inspector on MqttQuestBridge!");
+                }
+            });
         }
     }
 }
