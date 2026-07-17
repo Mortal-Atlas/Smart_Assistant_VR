@@ -21,6 +21,9 @@ public class MqttQuestBridge : M2MqttUnityClient
     [Tooltip("Drag the GameObject with the AppStateManager script here")]
     public AppStateManager appStateManager;
 
+    [Tooltip("Drag the GameObject with the SpotifyController script here")]
+    public SpotifyController spotifyController;
+
     [Header("Controls")]
     [Tooltip("Input Action for Right Thumbstick Click (Press)")]
     public InputActionReference rightThumbstickClick;
@@ -33,8 +36,24 @@ public class MqttQuestBridge : M2MqttUnityClient
     // State tracking for the press-and-hold radial menu gesture
     private bool wasPressingThumbstick = false;
 
-    // We don't need to override Start with Task.Run anymore.
-    // The base M2MqttUnityClient actually handles the threaded socket connection safely!
+    private void OnEnable()
+    {
+        // Ensure input actions are actively listening
+        if (rightThumbstickClick != null && rightThumbstickClick.action != null)
+            rightThumbstickClick.action.Enable();
+        if (rightThumbstickAxis != null && rightThumbstickAxis.action != null)
+            rightThumbstickAxis.action.Enable();
+    }
+
+    private void OnDisable()
+    {
+        // Clean up input actions to avoid memory leaks
+        if (rightThumbstickClick != null && rightThumbstickClick.action != null)
+            rightThumbstickClick.action.Disable();
+        if (rightThumbstickAxis != null && rightThumbstickAxis.action != null)
+            rightThumbstickAxis.action.Disable();
+    }
+
     protected override void Start()
     {
         // Let the base class handle its own startup sequence normally.
@@ -50,6 +69,7 @@ public class MqttQuestBridge : M2MqttUnityClient
     private void HandleThumbstickInput()
     {
         if (rightThumbstickClick == null || rightThumbstickAxis == null) return;
+        if (rightThumbstickClick.action == null || rightThumbstickAxis.action == null) return;
 
         // Read the current state of the thumbstick click and directional axis
         bool isPressed = rightThumbstickClick.action.ReadValue<float>() > 0.5f;
@@ -128,8 +148,9 @@ public class MqttQuestBridge : M2MqttUnityClient
         
         // Subscribed to "rika/voice/input" to capture what the user says for the scrollable chat log
         // Added "rika/app/switch" to synchronize UI states
-        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input", "rika/app/switch" }, 
-            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
+        // Added "rika/spotify/state" to pull HACS SpotifyPlus metadata
+        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input", "rika/app/switch", "rika/spotify/state" }, 
+            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         
         // Broadcast that the VR headset is online and RETAIN the message (the 'true' flag at the end)
         client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("online"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
@@ -193,25 +214,30 @@ public class MqttQuestBridge : M2MqttUnityClient
         // --------------------------------------------------------
         else if (topic == "rika/voice/input")
         {
-            // This is the transcript of what the USER said.
-            if (chatController != null)
+            // This is the transcript of what the USER said. Safely dispatch to main thread.
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                // Passing a formatted string so the ChatController can append it to the log
-                chatController.OnMqttMessageReceived("\n\nUser: " + msg);
-            }
+                if (chatController != null)
+                {
+                    // Passing a formatted string so the ChatController can append it to the log
+                    chatController.OnMqttMessageReceived("\n\nUser: " + msg);
+                }
+            });
         }
         else if (topic == "rika/response")
         {
-            // This is Rika's AI reply.
-            if (chatController != null)
+            // This is Rika's AI reply. Safely dispatch to main thread.
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                // The chat controller handles pushing to the main thread internally
-                chatController.OnMqttMessageReceived("\n\nRika: " + msg);
-            }
-            else
-            {
-                Debug.LogWarning("RikaChatController is not assigned in the Inspector on MqttQuestBridge!");
-            }
+                if (chatController != null)
+                {
+                    chatController.OnMqttMessageReceived("\n\nRika: " + msg);
+                }
+                else
+                {
+                    Debug.LogWarning("RikaChatController is not assigned in the Inspector on MqttQuestBridge!");
+                }
+            });
         }
         // --------------------------------------------------------
         // APP STATE LOGIC: Switching the UI panels
@@ -230,6 +256,28 @@ public class MqttQuestBridge : M2MqttUnityClient
                     Debug.LogWarning("AppStateManager is not assigned in the Inspector on MqttQuestBridge!");
                 }
             });
+        }
+        // --------------------------------------------------------
+        // SPOTIFY LOGIC: Syncing Track Metadata
+        // --------------------------------------------------------
+        else if (topic == "rika/spotify/state")
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                if (spotifyController != null)
+                {
+                    spotifyController.UpdateState(msg);
+                }
+            });
+        }
+    }
+
+    public void PublishSpotifyCommand(string command)
+    {
+        if (client != null && client.IsConnected)
+        {
+            Debug.Log($"Sending Spotify Command: {command}");
+            client.Publish("rika/haos/spotify/toggle", System.Text.Encoding.UTF8.GetBytes(command), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
     }
 }

@@ -3532,81 +3532,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 583912715}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &567754039
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 567754040}
-  - component: {fileID: 567754042}
-  - component: {fileID: 567754041}
-  m_Layer: 3
-  m_Name: Scan
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!224 &567754040
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 567754039}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1854709256586088520}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &567754041
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 567754039}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &567754042
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 567754039}
-  m_CullTransparentMesh: 1
 --- !u!1 &570509646
 GameObject:
   m_ObjectHideFlags: 0
@@ -4334,6 +4259,81 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: -20}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &725923658
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 725923661}
+  - component: {fileID: 725923660}
+  - component: {fileID: 725923659}
+  m_Layer: 3
+  m_Name: fishing
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!114 &725923659
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725923658}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &725923660
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725923658}
+  m_CullTransparentMesh: 1
+--- !u!224 &725923661
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 725923658}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1854709256586088520}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &730722846
 GameObject:
   m_ObjectHideFlags: 0
@@ -4750,6 +4750,81 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 792310550}
+  m_CullTransparentMesh: 1
+--- !u!1 &800851550
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 800851551}
+  - component: {fileID: 800851553}
+  - component: {fileID: 800851552}
+  m_Layer: 3
+  m_Name: Inventory
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!224 &800851551
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 800851550}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1854709256586088520}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &800851552
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 800851550}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &800851553
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 800851550}
   m_CullTransparentMesh: 1
 --- !u!1 &807818339
 GameObject:
@@ -7701,10 +7776,21 @@ MonoBehaviour:
   scannerPanel: {fileID: 4843043917114063425}
   combatPanel: {fileID: 6404637677640808027}
   tomodatchiPanel: {fileID: 926870601}
-  forwardRightPanel: {fileID: 0}
-  forwardLeftPanel: {fileID: 0}
-  backLeftPanel: {fileID: 0}
+  forwardRightPanel: {fileID: 800851550}
+  forwardLeftPanel: {fileID: 725923658}
+  backLeftPanel: {fileID: 8449626364382652843}
   backRightPanel: {fileID: 0}
+--- !u!114 &1203707733 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5517693541142883412, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+  m_PrefabInstance: {fileID: 9003084276178558528}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 508765400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95a1b055eaa049049aae3bda31075fa9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1215391976
 GameObject:
   m_ObjectHideFlags: 0
@@ -13449,13 +13535,14 @@ GameObject:
   - component: {fileID: 2291240994722750993}
   - component: {fileID: 5767203313560754243}
   - component: {fileID: 1909078667463916345}
+  - component: {fileID: 5767203313560754244}
   m_Layer: 3
   m_Name: SpotifyPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!1 &157892538950691307
 GameObject:
   m_ObjectHideFlags: 0
@@ -13843,7 +13930,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 0}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -13960,10 +14047,11 @@ RectTransform:
   - {fileID: 1356359030628864465}
   - {fileID: 1692071107333857174}
   - {fileID: 7905476949269734711}
+  - {fileID: 725923661}
   - {fileID: 7169290746203193011}
   - {fileID: 2291240994722750993}
   - {fileID: 926870602}
-  - {fileID: 567754040}
+  - {fileID: 800851551}
   m_Father: {fileID: 3826901421483720818}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -14130,7 +14218,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.392}
+  m_Color: {r: 0.20754719, g: 0.20754719, b: 0.20754719, a: 0.392}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -14382,7 +14470,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2769747284498823850
 Transform:
   m_ObjectHideFlags: 0
@@ -14700,7 +14788,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &5252436176105228136
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14842,6 +14930,24 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 51237706011060021}
   m_CullTransparentMesh: 1
+--- !u!114 &5767203313560754244
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 51237706011060021}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9c8ae50000f5b44b9e721b66be62b0a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mqttBridge: {fileID: 1203707733}
+  trackNameText: {fileID: 0}
+  artistNameText: {fileID: 0}
+  albumArtImage: {fileID: 0}
+  playButtonIcon: {fileID: 0}
+  pauseButtonIcon: {fileID: 0}
 --- !u!33 &5814449612939866970
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -15214,9 +15320,13 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 6404637677640808027}
     - target: {fileID: 860824150314985939, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: cursorVisual
+      value: 
+      objectReference: {fileID: 198156543808379821}
+    - target: {fileID: 860824150314985939, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: scannerPanel
       value: 
-      objectReference: {fileID: 567754039}
+      objectReference: {fileID: 0}
     - target: {fileID: 860824150314985939, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: spotifyPanel
       value: 
@@ -15309,6 +15419,22 @@ PrefabInstance:
       propertyPath: appStateManager
       value: 
       objectReference: {fileID: 1203707729}
+    - target: {fileID: 5517693541142883412, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: spotifyController
+      value: 
+      objectReference: {fileID: 5767203313560754244}
+    - target: {fileID: 5517693541142883412, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: thumbstickDeadzone
+      value: 0.33
+      objectReference: {fileID: 0}
+    - target: {fileID: 5517693541142883412, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: rightThumbstickAxis
+      value: 
+      objectReference: {fileID: -8666952849799569744, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+    - target: {fileID: 5517693541142883412, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
+      propertyPath: rightThumbstickClick
+      value: 
+      objectReference: {fileID: 7702379037006995098, guid: c348712bda248c246b8c49b3db54643f, type: 3}
     - target: {fileID: 6503034398214984880, guid: 24dbe0d67f05ec2409026239eb6a4ee3, type: 3}
       propertyPath: ttsAgent
       value: 
