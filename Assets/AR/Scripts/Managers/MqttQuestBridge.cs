@@ -18,6 +18,8 @@ public class MqttQuestBridge : M2MqttUnityClient
     public static event System.Action<string> OnVoiceInputReceived;
     public static event System.Action<string> OnPetStateReceived;
     public static event System.Action<string> OnAppSwitched;
+    public static event System.Action<Vector2> OnFishingCastReceived;
+    public static event System.Action<string> OnCombatInputReceived;
 
     [Header("Margo Integration")]
     [Tooltip("Drag the GameObject with the RikaAgent script here")]
@@ -164,8 +166,8 @@ public class MqttQuestBridge : M2MqttUnityClient
         base.OnConnected();
         
         // Subscribed using centralized MargoTopics instead of hardcoded strings
-        client.Subscribe(new string[] { MargoTopics.Commands, MargoTopics.AIResponse, MargoTopics.VoiceInput, MargoTopics.AppSwitch, MargoTopics.VisionResult, MargoTopics.SpotifyState, MargoTopics.PhoneTouch, MargoTopics.PetState }, 
-            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
+        client.Subscribe(new string[] { MargoTopics.Commands, MargoTopics.AIResponse, MargoTopics.VoiceInput, MargoTopics.AppSwitch, MargoTopics.VisionResult, MargoTopics.SpotifyState, MargoTopics.PhoneTouch, MargoTopics.PetState, MargoTopics.FishingCast, MargoTopics.CombatInput }, 
+            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         
         // Broadcast that the VR headset is online and RETAIN the message
         PublishMessage(MargoTopics.VRStatus, "online", true);
@@ -271,6 +273,29 @@ public class MqttQuestBridge : M2MqttUnityClient
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
                 OnPetStateReceived?.Invoke(msg);
+            });
+        }
+        else if (topic == MargoTopics.FishingCast)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                try
+                {
+                    // Convert the raw X,Y string payload directly into a Unity Vector2
+                    Vector2 velocity = JsonUtility.FromJson<Vector2>(msg);
+                    OnFishingCastReceived?.Invoke(velocity);
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("Failed to parse Fishing Cast JSON: " + e.Message);
+                }
+            });
+        }
+        else if (topic == MargoTopics.CombatInput)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                OnCombatInputReceived?.Invoke(msg);
             });
         }
     }
