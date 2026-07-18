@@ -11,7 +11,15 @@ public class RikaCommand
 
 public class MqttQuestBridge : M2MqttUnityClient
 {
-    [Header("Rika Integration")]
+    // --- SINGLETON & EVENTS ---
+    public static MqttQuestBridge Instance { get; private set; }
+    public static event System.Action<string> OnSpotifyStateUpdated;
+    public static event System.Action<string> OnTouchDataReceived;
+    public static event System.Action<string> OnVoiceInputReceived;
+    public static event System.Action<string> OnPetStateReceived;
+    public static event System.Action<string> OnAppSwitched;
+
+    [Header("Margo Integration")]
     [Tooltip("Drag the GameObject with the RikaAgent script here")]
     public RikaAgent rikaAgent; 
     
@@ -36,20 +44,35 @@ public class MqttQuestBridge : M2MqttUnityClient
     // State tracking for the press-and-hold radial menu gesture
     private bool wasPressingThumbstick = false;
 
+    protected override void Awake()
+    {
+        // Enforce Singleton pattern so any script can access the network effortlessly
+        if (Instance != null && Instance != this) 
+        {
+            Destroy(this.gameObject);
+            return;
+        }
+        Instance = this;
+        
+        base.Awake();
+    }
+
     private void OnEnable()
     {
-        // Ensure input actions are actively listening
+        // Enable input actions safely
         if (rightThumbstickClick != null && rightThumbstickClick.action != null)
             rightThumbstickClick.action.Enable();
+            
         if (rightThumbstickAxis != null && rightThumbstickAxis.action != null)
             rightThumbstickAxis.action.Enable();
     }
 
     private void OnDisable()
     {
-        // Clean up input actions to avoid memory leaks
+        // Disable input actions safely to avoid memory leaks
         if (rightThumbstickClick != null && rightThumbstickClick.action != null)
             rightThumbstickClick.action.Disable();
+            
         if (rightThumbstickAxis != null && rightThumbstickAxis.action != null)
             rightThumbstickAxis.action.Disable();
     }
@@ -75,7 +98,7 @@ public class MqttQuestBridge : M2MqttUnityClient
         bool isPressed = rightThumbstickClick.action.ReadValue<float>() > 0.5f;
         Vector2 currentAxis = rightThumbstickAxis.action.ReadValue<Vector2>();
 
-        // 1. Just pressed down: Always prompt Rika immediately
+        // 1. Just pressed down: Always prompt Margo immediately
         if (isPressed && !wasPressingThumbstick)
         {
             ActivateRika();
@@ -94,17 +117,14 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     private void ActivateRika()
     {
-        Debug.Log("Thumbstick Pressed: Activating Rika!");
+        Debug.Log("Thumbstick Pressed: Activating Margo!");
         if (rikaAgent != null)
         {
             rikaAgent.Materialize();
         }
         
-        // Optional: Immediately tell HAOS to start listening for voice dictation
-        if (client != null && client.IsConnected)
-        {
-            client.Publish("rika/voice/listen", System.Text.Encoding.UTF8.GetBytes("start"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
-        }
+        // Use our new clean helper!
+        PublishMessage(MargoTopics.VoiceListen, "start");
     }
 
     private void HandleDirectionalRelease(Vector2 axis)
@@ -135,36 +155,28 @@ public class MqttQuestBridge : M2MqttUnityClient
 
         Debug.Log($"Thumbstick Released at angle {angle:F1}: Changing App State to {appState}");
         
-        // Publish the state change to the MQTT broker so the UI Canvas (Phone) updates
-        if (client != null && client.IsConnected)
-        {
-            client.Publish("rika/app/switch", System.Text.Encoding.UTF8.GetBytes(appState), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-        }
+        // Publish the state change to the MQTT broker
+        PublishMessage(MargoTopics.AppSwitch, appState, true);
     }
 
     protected override void OnConnected()
     {
         base.OnConnected();
         
-        // Subscribed to "rika/voice/input" to capture what the user says for the scrollable chat log
-        // Added "rika/app/switch" to synchronize UI states
-        // Added "margo/vision/result" to catch the scanner output
-        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input", "rika/app/switch", "margo/vision/result" }, 
-            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+        // Subscribed using centralized MargoTopics instead of hardcoded strings
+        client.Subscribe(new string[] { MargoTopics.Commands, MargoTopics.AIResponse, MargoTopics.VoiceInput, MargoTopics.AppSwitch, MargoTopics.VisionResult, MargoTopics.SpotifyState, MargoTopics.PhoneTouch, MargoTopics.PetState }, 
+            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         
-        // Broadcast that the VR headset is online and RETAIN the message (the 'true' flag at the end)
-        client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("online"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+        // Broadcast that the VR headset is online and RETAIN the message
+        PublishMessage(MargoTopics.VRStatus, "online", true);
         
-        Debug.Log("Connected to the Rika Message Bus! Waiting for commands and responses...");
+        Debug.Log("Connected to the Margo Message Bus! Waiting for commands...");
     }
 
     protected override void OnApplicationQuit()
     {
         // Be nice and tell the phone we're offline when closing the VR app
-        if (client != null && client.IsConnected)
-        {
-            client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("offline"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-        }
+        PublishMessage(MargoTopics.VRStatus, "offline", true);
         base.OnApplicationQuit();
     }
 
@@ -173,7 +185,7 @@ public class MqttQuestBridge : M2MqttUnityClient
         string msg = System.Text.Encoding.UTF8.GetString(message);
         Debug.Log("Raw message received on " + topic + ": " + msg);
         
-        if (topic == "rika/commands")
+        if (topic == MargoTopics.Commands)
         {
             try 
             {
@@ -206,79 +218,73 @@ public class MqttQuestBridge : M2MqttUnityClient
             }
             catch (System.Exception e)
             {
-                Debug.LogError("Failed to parse the JSON command. Did you format it right? Error: " + e.Message);
+                Debug.LogError("Failed to parse the JSON command. Error: " + e.Message);
             }
         } 
-        // --------------------------------------------------------
-        // CHAT LOGIC: Capturing both sides of the conversation
-        // --------------------------------------------------------
-        else if (topic == "rika/voice/input")
+        else if (topic == MargoTopics.VoiceInput)
         {
-            // This is the transcript of what the USER said. Safely dispatch to main thread.
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                if (chatController != null)
-                {
-                    // Passing a formatted string so the ChatController can append it to the log
-                    chatController.OnMqttMessageReceived("\n\nUser: " + msg);
-                }
+                if (chatController != null) chatController.OnMqttMessageReceived("\n\nUser: " + msg);
+                OnVoiceInputReceived?.Invoke(msg);
             });
         }
-        else if (topic == "rika/response")
+        else if (topic == MargoTopics.AIResponse)
         {
-            // This is Rika's AI reply. Safely dispatch to main thread.
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                if (chatController != null)
-                {
-                    chatController.OnMqttMessageReceived("\n\nRika: " + msg);
-                }
-                else
-                {
-                    Debug.LogWarning("RikaChatController is not assigned in the Inspector on MqttQuestBridge!");
-                }
+                if (chatController != null) chatController.OnMqttMessageReceived("\n\nMargo: " + msg);
             });
         }
-        // --------------------------------------------------------
-        // APP STATE LOGIC: Switching the UI panels
-        // --------------------------------------------------------
-        else if (topic == "rika/app/switch")
+        else if (topic == MargoTopics.AppSwitch)
         {
-            // MUST push to main thread to modify GameObjects
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                if (appStateManager != null)
-                {
-                    appStateManager.SwitchApp(msg);
-                }
-                else
-                {
-                    Debug.LogWarning("AppStateManager is not assigned in the Inspector on MqttQuestBridge!");
-                }
+                if (appStateManager != null) appStateManager.SwitchApp(msg);
+                OnAppSwitched?.Invoke(msg);
             });
         }
-        // --------------------------------------------------------
-        // VISION SCANNER LOGIC: Updating the Gemini Panel
-        // --------------------------------------------------------
-        else if (topic == "margo/vision/result")
+        else if (topic == MargoTopics.VisionResult)
         {
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                if (geminiManager != null)
-                {
-                    geminiManager.UpdateScanResult(msg);
-                }
+                if (geminiManager != null) geminiManager.UpdateScanResult(msg);
+            });
+        }
+        else if (topic == MargoTopics.SpotifyState)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                // We broadcast this to ANY script listening, fully decoupling the UI!
+                OnSpotifyStateUpdated?.Invoke(msg);
+            });
+        }
+        else if (topic == MargoTopics.PhoneTouch)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                OnTouchDataReceived?.Invoke(msg);
+            });
+        }
+        else if (topic == MargoTopics.PetState)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            {
+                OnPetStateReceived?.Invoke(msg);
             });
         }
     }
 
-    // --- ADD THIS METHOD FOR THE SPOTIFY CONTROLLER ---
-    public void PublishSpotifyCommand(string command)
+    // --- CLEAN PUBLISH HELPER ---
+    public void PublishMessage(string topic, string payload, bool retain = false)
     {
         if (client != null && client.IsConnected)
         {
-            Debug.Log("Publishing Spotify Command: " + command);
-            client.Publish("rika/haos/spotify/toggle", System.Text.Encoding.UTF8.GetBytes(command), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+            client.Publish(topic, System.Text.Encoding.UTF8.GetBytes(payload), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, retain);
+        }
+        else
+        {
+            Debug.LogWarning($"[MQTT] Cannot publish to {topic}. Broker is disconnected.");
         }
     }
 }

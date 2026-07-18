@@ -15,10 +15,6 @@ public class SpotifyState
 
 public class SpotifyController : MonoBehaviour
 {
-    [Header("Networking")]
-    [Tooltip("Reference to the main MQTT Bridge")]
-    public MqttQuestBridge mqttBridge;
-
     [Header("UI Elements")]
     public TextMeshProUGUI trackNameText;
     public TextMeshProUGUI artistNameText;
@@ -32,7 +28,18 @@ public class SpotifyController : MonoBehaviour
 
     private string currentArtUrl = "";
 
-    // Called from MqttQuestBridge when "rika/spotify/state" receives a message
+    private void OnEnable()
+    {
+        // Listen to the static event. No Inspector drag-and-drop required!
+        MqttQuestBridge.OnSpotifyStateUpdated += UpdateState;
+    }
+
+    private void OnDisable()
+    {
+        MqttQuestBridge.OnSpotifyStateUpdated -= UpdateState;
+    }
+
+    // Called via Event when "margo/spotify/state" receives a message
     public void UpdateState(string jsonState)
     {
         try
@@ -83,36 +90,33 @@ public class SpotifyController : MonoBehaviour
     public void OnPlayPausePressed()
     {
         // HAOS spotifyplus usually accepts 'play_pause' to toggle the state
-        mqttBridge.PublishSpotifyCommand("play_pause");
+        MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "play_pause");
     }
 
     public void OnNextPressed()
     {
-        mqttBridge.PublishSpotifyCommand("next");
+        MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "next");
     }
 
     public void OnPreviousPressed()
     {
-        mqttBridge.PublishSpotifyCommand("previous");
+        MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "previous");
     }
 
     // --- Extended Commands ---
 
     public void OnSkipForwardPressed()
     {
-        // Send a skip forward command (e.g., +15 seconds)
-        mqttBridge.PublishSpotifyCommand("skip_forward");
+        MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "skip_forward");
     }
 
     public void OnRewindPressed()
     {
-        // Send a rewind command (e.g., -15 seconds)
-        mqttBridge.PublishSpotifyCommand("rewind");
+        MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "rewind");
     }
 
     public void OnLikePressed()
     {
-        // Send command to save track to user's Spotify library
-        mqttBridge.PublishSpotifyCommand("like");
+        MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "like");
     }
 }
