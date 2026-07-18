@@ -1,96 +1,90 @@
 using UnityEngine;
-using System.Collections;
-using Meta.XR.BuildingBlocks.AIBlocks;
-using uPLibrary.Networking.M2Mqtt;
-using uPLibrary.Networking.M2Mqtt.Messages;
-using System.Text;
+using TMPro;
+using UnityEngine.InputSystem;
 
 public class GeminiManager : MonoBehaviour
 {
-    [Header("MQTT Settings")]
-    [Tooltip("IP of your Raspberry Pi 5")]
-    public string brokerIPAddress = "192.168.1.127";
-    public int brokerPort = 1883;
-    public string mqttUsername = "rika";
-    public string mqttPassword = "12345";
+    [Header("Networking")]
+    [Tooltip("Reference to the main MQTT Bridge")]
+    public MqttQuestBridge mqttBridge;
 
-    [Header("Connections")]
-    public TextToSpeechAgent ttsAgent;
+    [Header("Input")]
+    [Tooltip("Input Action for Right Trigger Pull")]
+    public InputActionReference rightTriggerAction;
 
-    private MqttClient client;
-    private readonly string topicPublish = "rika/prompt";
-    private readonly string topicSubscribe = "rika/response";
-    
-    private string pendingResponse = null;
+    [Header("UI Elements")]
+    public TextMeshProUGUI scannerOutputText;
+    public GameObject loadingIndicator;
 
-    void Start()
+    private bool isScanning = false;
+
+    private void OnEnable()
     {
-        // Start the connection process without freezing the main thread
-        StartCoroutine(ConnectToPiRoutine());
-    }
-
-    private IEnumerator ConnectToPiRoutine()
-    {
-        Debug.Log("[Rika Network] Starting background connection...");
-        
-        // Give Unity a moment to breathe after startup
-        yield return new WaitForSeconds(1.0f);
-
-        client = new MqttClient(brokerIPAddress);
-        client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
-        
-        string clientId = "Quest_Rika_Client_" + System.Guid.NewGuid().ToString();
-        
-        try
+        if (rightTriggerAction != null && rightTriggerAction.action != null)
         {
-            client.Connect(clientId, mqttUsername, mqttPassword);
-            client.Subscribe(new string[] { topicSubscribe }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
-            Debug.Log("[Rika Network] Connected to the Pi 5 broker!");
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError($"[Rika Network] Connection Failed: {e.Message}");
+            rightTriggerAction.action.Enable();
+            rightTriggerAction.action.performed += OnTriggerPulled;
         }
     }
 
-    // --- WIRE THIS UP IN THE INSPECTOR ---
-    // Drag your GameObject with GeminiManager into the STT Agent's "OnTranscription" event
-    // and select GeminiManager -> OnTranscriptionReceived(string)
-    public void OnTranscriptionReceived(string transcript)
+    private void OnDisable()
     {
-        // ADD THIS LINE
-        Debug.Log($"<color=green>!!! RIKA MANAGER RECEIVED EVENT: {transcript} !!!</color>");
-
-        if (string.IsNullOrWhiteSpace(transcript)) return;
-        
-        if (client != null && client.IsConnected)
+        if (rightTriggerAction != null && rightTriggerAction.action != null)
         {
-            Debug.Log($"[Rika Network] Sending transcript: {transcript}");
-            client.Publish(topicPublish, Encoding.UTF8.GetBytes(transcript), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
+            rightTriggerAction.action.performed -= OnTriggerPulled;
+            rightTriggerAction.action.Disable();
+        }
+    }
+
+    private void OnTriggerPulled(InputAction.CallbackContext context)
+    {
+        // Only allow scanning if the Scanner panel is actually active
+        // and we aren't already waiting for a response
+        if (!gameObject.activeInHierarchy || isScanning) return;
+
+        ExecuteScan();
+    }
+
+    public void ExecuteScan()
+    {
+        isScanning = true;
+        
+        if (scannerOutputText != null) 
+            scannerOutputText.text = "Margo is analyzing...";
+            
+        if (loadingIndicator != null) 
+            loadingIndicator.SetActive(true);
+
+        // Tell the Pi to grab a frame from the phone and run it through Gemini
+        if (mqttBridge != null && mqttBridge.client != null && mqttBridge.client.IsConnected)
+        {
+            Debug.Log("Scanner Triggered. Requesting vision analysis...");
+            // Using a new topic specifically for vision commands
+            mqttBridge.client.Publish("margo/vision/capture", System.Text.Encoding.UTF8.GetBytes("SNAP"), uPLibrary.Networking.M2Mqtt.Messages.MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
         else
         {
-            Debug.LogError("[Rika Network] MQTT is not connected. Can't send message.");
+            Debug.LogWarning("Scanner failed: MQTT bridge is disconnected.");
+            isScanning = false;
+            if (loadingIndicator != null) loadingIndicator.SetActive(false);
+            if (scannerOutputText != null) scannerOutputText.text = "Connection error. Margo can't see right now.";
         }
     }
 
-    void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
+    // --- THE MISSING METHOD ---
+    // Called by MqttQuestBridge when "margo/vision/result" receives a payload
+    public void UpdateScanResult(string resultText)
     {
-        string responseText = Encoding.UTF8.GetString(e.Message);
-        pendingResponse = responseText.Replace("*", "");
-    }
+        isScanning = false;
+        
+        if (loadingIndicator != null) 
+            loadingIndicator.SetActive(false);
 
-    void Update()
-    {
-        if (!string.IsNullOrEmpty(pendingResponse))
+        if (scannerOutputText != null)
         {
-            if (ttsAgent != null) ttsAgent.SpeakText(pendingResponse);
-            pendingResponse = null;
+            scannerOutputText.text = resultText;
         }
-    }
-
-    void OnApplicationQuit()
-    {
-        if (client != null && client.IsConnected) client.Disconnect();
+        
+        Debug.Log("Scan complete: " + resultText);
     }
 }

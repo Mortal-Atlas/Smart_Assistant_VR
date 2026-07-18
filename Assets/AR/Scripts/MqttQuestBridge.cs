@@ -21,8 +21,8 @@ public class MqttQuestBridge : M2MqttUnityClient
     [Tooltip("Drag the GameObject with the AppStateManager script here")]
     public AppStateManager appStateManager;
 
-    [Tooltip("Drag the GameObject with the SpotifyController script here")]
-    public SpotifyController spotifyController;
+    [Tooltip("Drag the GameObject with the GeminiManager script here")]
+    public GeminiManager geminiManager;
 
     [Header("Controls")]
     [Tooltip("Input Action for Right Thumbstick Click (Press)")]
@@ -148,8 +148,8 @@ public class MqttQuestBridge : M2MqttUnityClient
         
         // Subscribed to "rika/voice/input" to capture what the user says for the scrollable chat log
         // Added "rika/app/switch" to synchronize UI states
-        // Added "rika/spotify/state" to pull HACS SpotifyPlus metadata
-        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input", "rika/app/switch", "rika/spotify/state" }, 
+        // Added "margo/vision/result" to catch the scanner output
+        client.Subscribe(new string[] { "rika/commands", "rika/response", "rika/voice/input", "rika/app/switch", "margo/vision/result" }, 
             new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         
         // Broadcast that the VR headset is online and RETAIN the message (the 'true' flag at the end)
@@ -258,25 +258,26 @@ public class MqttQuestBridge : M2MqttUnityClient
             });
         }
         // --------------------------------------------------------
-        // SPOTIFY LOGIC: Syncing Track Metadata
+        // VISION SCANNER LOGIC: Updating the Gemini Panel
         // --------------------------------------------------------
-        else if (topic == "rika/spotify/state")
+        else if (topic == "margo/vision/result")
         {
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
-                if (spotifyController != null)
+                if (geminiManager != null)
                 {
-                    spotifyController.UpdateState(msg);
+                    geminiManager.UpdateScanResult(msg);
                 }
             });
         }
     }
 
+    // --- ADD THIS METHOD FOR THE SPOTIFY CONTROLLER ---
     public void PublishSpotifyCommand(string command)
     {
         if (client != null && client.IsConnected)
         {
-            Debug.Log($"Sending Spotify Command: {command}");
+            Debug.Log("Publishing Spotify Command: " + command);
             client.Publish("rika/haos/spotify/toggle", System.Text.Encoding.UTF8.GetBytes(command), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
     }
