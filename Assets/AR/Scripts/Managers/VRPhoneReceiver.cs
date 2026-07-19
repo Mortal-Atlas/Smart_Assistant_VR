@@ -125,20 +125,26 @@ public class VRPhoneReceiver : MonoBehaviour
         {
             Debug.Log("[VRPhoneReceiver] Physical Click Detected on: " + hit.gameObject.name);
 
+            // --- Combat App ---
+            if (hit.gameObject.name == "Btn_LightAttack") 
+                MqttQuestBridge.Instance.PublishMessage(MargoTopics.CombatInput, "Light Attack");
+            if (hit.gameObject.name == "Btn_HeavySlash") 
+                MqttQuestBridge.Instance.PublishMessage(MargoTopics.CombatInput, "Heavy Slash");
             if (hit.gameObject.name == "Btn_FuriousSlash") 
                 MqttQuestBridge.Instance.PublishMessage(MargoTopics.CombatInput, "Furious Slash");
             
+            // --- Spotify ---
             if (hit.gameObject.name == "Btn_PlayPause") 
                 MqttQuestBridge.Instance.PublishMessage(MargoTopics.SpotifyToggle, "toggle");
             
-            // App Navigation
+            // --- App Navigation ---
             if (hit.gameObject.name == "Btn_AppTomodatchi") SwitchAppModeGlobal("Tomodatchi");
             if (hit.gameObject.name == "Btn_AppCombat") SwitchAppModeGlobal("Combat");
             if (hit.gameObject.name == "Btn_AppScanner") SwitchAppModeGlobal("Scanner");
             if (hit.gameObject.name == "Btn_AppSpotify") SwitchAppModeGlobal("Spotify");
             if (hit.gameObject.name == "Btn_TestChat") SwitchAppModeGlobal("AIChat");
 
-            // Tomodatchi Interactions routed to the new Manager
+            // --- Tomodatchi Interactions ---
             if (hit.gameObject.name == "Btn_FeedApple") TomodatchiManager.Instance.FeedTomodatchi("Apples", 10);
             if (hit.gameObject.name == "Btn_FeedSushi") TomodatchiManager.Instance.FeedTomodatchi("Sushi", 25);
         }
