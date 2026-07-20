@@ -1,251 +1,173 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
-using System.Collections;
 
 public class FamiliarController : MonoBehaviour
 {
-    [Header("RPG Stats")]
+    [Header("Familiar Stats")]
     public float maxHealth = 100f;
-    public float maxMana = 50f;
+    public float maxMana = 100f;
     public float maxStamina = 100f;
-    
+
+    // The true current values, exposed publicly so the CombatManager 
+    // can read them, but set to private so only this script can modify them.
     public float currentHealth { get; private set; }
     public float currentMana { get; private set; }
     public float currentStamina { get; private set; }
 
-    [Header("Visual Placeholders (Greybox)")]
-    [Tooltip("Drag the Cube representing your sword here. It should be a child of the Familiar.")]
-    public GameObject swordCube;
+    [Header("Regeneration Rates")]
+    public float staminaRegenPerSec = 15f; // BotW style fast regen
+    public float manaRegenPerSec = 2f;     // Slower magic regen
 
-    [Header("Movement & Physics")]
-    public float moveSpeed = 3f;
-    public float jumpForce = 5f;
-    public float dashForce = 10f;
-    public float staminaRegenRate = 15f;
-    public float manaRegenRate = 2f;
-    
-    [Header("Controller Inputs (Right Hand)")]
-    public InputActionReference thumbstickAxis;
-    public InputActionReference jumpButton; // Usually 'A'
-    public InputActionReference attackButton; // Usually 'B'
-    public InputActionReference dashTrigger; // Right Trigger
+    [Header("UI & Feedback")]
+    public FamiliarCombatUI combatUI; 
+    public GameObject floatingDamageTextPrefab;
+    public Transform damageTextSpawnPoint;
 
-    private Rigidbody rb;
-    private bool isGrounded = true;
+    // Example Animator reference for combat
+    private Animator anim;
 
-    private void Awake()
+    void Start()
     {
-        rb = GetComponent<Rigidbody>();
+        anim = GetComponent<Animator>();
+
+        // Initialize all stats at max
         currentHealth = maxHealth;
         currentMana = maxMana;
         currentStamina = maxStamina;
 
-        // Make sure sword is hidden by default
-        if (swordCube != null) swordCube.SetActive(false);
+        // Force UI to display full bars on boot
+        UpdateAllUI();
     }
 
-    private void OnEnable()
+    void Update()
     {
-        if (jumpButton != null) { jumpButton.action.Enable(); jumpButton.action.performed += DoJump; }
-        if (attackButton != null) { attackButton.action.Enable(); attackButton.action.performed += DoAttack; }
-        if (dashTrigger != null) { dashTrigger.action.Enable(); dashTrigger.action.performed += DoDash; }
-        if (thumbstickAxis != null) thumbstickAxis.action.Enable();
-    }
-
-    private void OnDisable()
-    {
-        if (jumpButton != null) { jumpButton.action.performed -= DoJump; jumpButton.action.Disable(); }
-        if (attackButton != null) { attackButton.action.performed -= DoAttack; attackButton.action.Disable(); }
-        if (dashTrigger != null) { dashTrigger.action.performed -= DoDash; dashTrigger.action.Disable(); }
-        if (thumbstickAxis != null) thumbstickAxis.action.Disable();
-    }
-
-    private void Update()
-    {
-        HandleMovement();
-        RegenStats();
-    }
-
-    private void HandleMovement()
-    {
-        if (thumbstickAxis == null) return;
-        Vector2 input = thumbstickAxis.action.ReadValue<Vector2>();
+        // --- PASSIVE REGENERATION ---
         
-        Vector3 move = new Vector3(input.x, 0, input.y) * moveSpeed;
-        
-        rb.linearVelocity = new Vector3(move.x, rb.linearVelocity.y, move.z);
-
-        if (move.magnitude > 0.1f)
-        {
-            transform.rotation = Quaternion.LookRotation(new Vector3(move.x, 0, move.z));
-        }
-    }
-
-    private void RegenStats()
-    {
+        // Regenerate Stamina
         if (currentStamina < maxStamina)
         {
-            currentStamina = Mathf.Min(currentStamina + (staminaRegenRate * Time.deltaTime), maxStamina);
+            currentStamina += staminaRegenPerSec * Time.deltaTime;
+            currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
+            if (combatUI != null) combatUI.UpdateStaminaBar(currentStamina, maxStamina);
         }
-        
-        // Slow passive mana regeneration (based on manaRegenRate, which is currently set to 2 per second)
+
+        // Regenerate Mana
         if (currentMana < maxMana)
         {
-            currentMana = Mathf.Min(currentMana + (manaRegenRate * Time.deltaTime), maxMana);
+            currentMana += manaRegenPerSec * Time.deltaTime;
+            currentMana = Mathf.Clamp(currentMana, 0, maxMana);
+            if (combatUI != null) combatUI.UpdateManaBar(currentMana, maxMana);
         }
     }
 
-    private void DoJump(InputAction.CallbackContext ctx)
+    // --- HEALTH LOGIC ---
+    public void TakeDamage(float damage)
     {
-        if (isGrounded && currentStamina >= 20f)
-        {
-            rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
-            currentStamina -= 20f;
-            isGrounded = false;
-        }
-    }
-
-    private void DoDash(InputAction.CallbackContext ctx)
-    {
-        if (currentStamina >= 30f)
-        {
-            Vector3 dashDir = transform.forward * dashForce;
-            rb.AddForce(dashDir, ForceMode.Impulse);
-            currentStamina -= 30f;
-        }
-    }
-
-    private void DoAttack(InputAction.CallbackContext ctx)
-    {
-        if (currentStamina >= 15f)
-        {
-            currentStamina -= 15f;
-            StartCoroutine(ShowSwordAndDamage(25f, 1.5f)); // 25 dmg, 1.5m range
-        }
-    }
-
-    // Link these 4 methods directly to your Meta Poke Interactables!
-
-    public void CastHeavySlash()
-    {
-        if (currentMana >= 15f)
-        {
-            currentMana -= 15f;
-            LogToPhone("<color=#FF5555>Used Heavy Slash!</color>");
-            StartCoroutine(ShowSwordAndDamage(50f, 2.0f)); // Double damage, slightly longer range
-        }
-        else LogToPhone("Not enough Mana!");
-    }
-
-    public void CastSpinAttack()
-    {
-        if (currentMana >= 25f)
-        {
-            currentMana -= 25f;
-            LogToPhone("<color=#FFAA00>Used Spin Attack!</color>");
-            
-            // AOE Damage all around the familiar
-            Collider[] hitEnemies = Physics.OverlapSphere(transform.position, 3f);
-            foreach(var hit in hitEnemies)
-            {
-                AREnemy enemy = hit.GetComponent<AREnemy>();
-                if (enemy != null) enemy.TakeDamage(20f);
-            }
-        }
-        else LogToPhone("Not enough Mana!");
-    }
-
-    public void CastHealPulse()
-    {
-        if (currentMana >= 30f)
-        {
-            currentMana -= 30f;
-            Heal(40f);
-            LogToPhone("<color=#55FF55>Cast Heal Pulse!</color>");
-        }
-        else LogToPhone("Not enough Mana!");
-    }
-
-    public void CastExecute()
-    {
-        // Ultimate requires a full mana bar (50)
-        if (currentMana >= maxMana)
-        {
-            currentMana = 0; // Burn all mana
-            LogToPhone("<color=#FF00FF>EXECUTE ULTIMATE!</color>");
-            
-            // Push forward rapidly and deal massive AOE damage
-            rb.AddForce(transform.forward * (dashForce * 1.5f), ForceMode.Impulse);
-            StartCoroutine(ShowSwordAndDamage(150f, 3.5f)); // 150 damage, huge range!
-        }
-        else LogToPhone($"Need MAX Mana for Execute! ({currentMana}/{maxMana})");
-    }
-
-    private IEnumerator ShowSwordAndDamage(float damage, float range)
-    {
-        // 1. Show the greybox sword cube
-        if (swordCube != null) swordCube.SetActive(true);
-
-        // 2. Deal the damage in front of the familiar
-        Collider[] hitEnemies = Physics.OverlapSphere(transform.position + (transform.forward * range), range);
-        bool hitSomeone = false;
+        currentHealth -= damage;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
         
-        foreach(var hit in hitEnemies)
+        if (combatUI != null) combatUI.UpdateHealthBar(currentHealth, maxHealth);
+        ShowDamagePopup(damage);
+
+        if (currentHealth <= 0)
         {
-            AREnemy enemy = hit.GetComponent<AREnemy>();
-            if (enemy != null) 
-            {
-                enemy.TakeDamage(damage);
-                hitSomeone = true;
-            }
+            if(anim != null) anim.SetTrigger("Die");
+            // Add any game-over or familiar despawn logic here
         }
-
-        // 3. Gain Mana if we successfully hit an enemy!
-        if (hitSomeone)
-        {
-            GainMana(5f); 
-        }
-
-        // 4. Wait a tiny fraction of a second so the user can see the sword flash
-        yield return new WaitForSeconds(0.2f);
-
-        // 5. Hide the sword again
-        if (swordCube != null) swordCube.SetActive(false);
     }
 
-    public void TakeDamage(float amount)
-    {
-        currentHealth = Mathf.Max(0, currentHealth - amount);
-        LogToPhone($"<color=red>Familiar took {amount} damage!</color>");
-        
-        // Gain a chunk of Mana when taking a hit!
-        GainMana(10f);
-    }
-    
-    private void GainMana(float amount)
-    {
-        currentMana = Mathf.Min(currentMana + amount, maxMana);
-    }
-
+    // Called by the InventoryManager when consuming a Health Potion
     public void Heal(float amount)
     {
-        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        currentHealth += amount;
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        if (combatUI != null) combatUI.UpdateHealthBar(currentHealth, maxHealth);
     }
-    
+
+    // --- STAMINA LOGIC (Physical Attacks) ---
+    public bool TryUseStamina(float cost)
+    {
+        if (currentStamina >= cost)
+        {
+            currentStamina -= cost;
+            if (combatUI != null) combatUI.UpdateStaminaBar(currentStamina, maxStamina);
+            return true; // We had enough, proceed with attack
+        }
+        
+        // Not enough stamina
+        Debug.Log("Familiar is out of Stamina!");
+        return false; 
+    }
+
+    // Called by the InventoryManager when consuming a Stamina Potion/Food
     public void RestoreStamina(float amount)
     {
-        currentStamina = Mathf.Min(currentStamina + amount, maxStamina);
+        currentStamina += amount;
+        currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
+        if (combatUI != null) combatUI.UpdateStaminaBar(currentStamina, maxStamina);
     }
 
-    private void LogToPhone(string msg)
+    // --- MANA LOGIC (Spells) ---
+    public bool TryUseMana(float cost)
     {
-        // We reuse the ItemPickedUp event to cleanly send text to the fading combat log on the phone!
-        InventoryManager.Instance?.AddLogMessage(msg);
+        if (currentMana >= cost)
+        {
+            currentMana -= cost;
+            if (combatUI != null) combatUI.UpdateManaBar(currentMana, maxMana);
+            return true; // We had enough, proceed with spell
+        }
+        
+        // Not enough mana
+        Debug.Log("Familiar is out of Mana!");
+        return false;
     }
 
-    private void OnCollisionEnter(Collision collision)
+    // Called by the InventoryManager when consuming an MP Potion
+    public void RestoreMana(float amount)
     {
-        // Simple ground detection
-        if (collision.gameObject.CompareTag("Ground")) isGrounded = true;
+        currentMana += amount;
+        currentMana = Mathf.Clamp(currentMana, 0, maxMana);
+        if (combatUI != null) combatUI.UpdateManaBar(currentMana, maxMana);
+    }
+
+    // --- COMBAT EXECUTION (Called via MQTT / Phone Triggers) ---
+    public void ExecuteHeavySlash()
+    {
+        if (TryUseStamina(30f))
+        {
+            if(anim != null) anim.SetTrigger("HeavySlash");
+            // Add actual hit detection/damage output logic to your weapon later
+        }
+    }
+
+    public void ExecuteFireball()
+    {
+        if (TryUseMana(25f))
+        {
+            if(anim != null) anim.SetTrigger("CastSpell");
+            // Add projectile spawning logic here later
+        }
+    }
+
+    // --- HELPER METHODS ---
+    private void UpdateAllUI()
+    {
+        if(combatUI != null)
+        {
+            combatUI.UpdateHealthBar(currentHealth, maxHealth);
+            combatUI.UpdateManaBar(currentMana, maxMana);
+            combatUI.UpdateStaminaBar(currentStamina, maxStamina);
+        }
+    }
+
+    private void ShowDamagePopup(float damage)
+    {
+        if (floatingDamageTextPrefab != null && damageTextSpawnPoint != null)
+        {
+            Vector3 jitterOffset = new Vector3(Random.Range(-0.3f, 0.3f), Random.Range(-0.1f, 0.1f), Random.Range(-0.3f, 0.3f));
+            GameObject popup = Instantiate(floatingDamageTextPrefab, damageTextSpawnPoint.position + jitterOffset, Quaternion.identity);
+            
+            FloatingDamageText textScript = popup.GetComponent<FloatingDamageText>();
+            if (textScript != null) textScript.Setup(damage);
+        }
     }
 }

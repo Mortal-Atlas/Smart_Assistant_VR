@@ -1,73 +1,142 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.Events;
 
 public class AppStateManager : MonoBehaviour
 {
-    [Header("App Panels (Assign your UI GameObjects here)")]
-    public GameObject standbyPanel;
-    public GameObject spotifyPanel;
-    public GameObject scannerPanel;
-    public GameObject combatPanel;
-    public GameObject tomodatchiPanel;
+    public static AppStateManager Instance { get; private set; }
 
-    [Header("Future App Panels")]
-    public GameObject forwardRightPanel;
-    public GameObject forwardLeftPanel;
-    public GameObject backLeftPanel;
-    public GameObject backRightPanel;
+    [Header("Input Bindings (Right Controller)")]
+    [Tooltip("Bind to XRI RightHand/Thumbstick Press")]
+    public InputActionReference thumbstickClick;
+    [Tooltip("Bind to XRI RightHand/Primary2DAxis")]
+    public InputActionReference thumbstickAxis;
 
-    /// <summary>
-    /// Disables all panels, then enables the requested one.
-    /// </summary>
-    public void SwitchApp(string appName)
+    [Header("App Canvases")]
+    public GameObject spellCanvas;
+    public GameObject spotifyCanvas;
+    public GameObject scannerCanvas;
+    public GameObject combatCanvas;
+
+    [Header("Margo Voice Activation")]
+    [Tooltip("Fires when the thumbstick is clicked without being pushed in a direction.")]
+    public UnityEvent OnMargoActivated;
+
+    // Internal state tracking for the radial menu
+    private bool isThumbstickPressed = false;
+    private bool appSwitchedDuringPress = false;
+    private GameObject currentActiveApp;
+
+    private void Awake()
     {
-        DisableAllPanels();
+        if (Instance != null && Instance != this) Destroy(this.gameObject);
+        else Instance = this;
+    }
 
-        switch (appName)
+    private void OnEnable()
+    {
+        if (thumbstickClick != null)
         {
-            case "Standby":
-                if (standbyPanel) standbyPanel.SetActive(true);
-                break;
-            case "Spotify":
-                if (spotifyPanel) spotifyPanel.SetActive(true);
-                break;
-            case "Scanner":
-                if (scannerPanel) scannerPanel.SetActive(true);
-                break;
-            case "Combat":
-                if (combatPanel) combatPanel.SetActive(true);
-                break;
-            case "Tomodatchi":
-                if (tomodatchiPanel) tomodatchiPanel.SetActive(true);
-                break;
-            case "App_ForwardRight":
-                if (forwardRightPanel) forwardRightPanel.SetActive(true);
-                break;
-            case "App_ForwardLeft":
-                if (forwardLeftPanel) forwardLeftPanel.SetActive(true);
-                break;
-            case "App_BackLeft":
-                if (backLeftPanel) backLeftPanel.SetActive(true);
-                break;
-            case "App_BackRight":
-                if (backRightPanel) backRightPanel.SetActive(true);
-                break;
-            default:
-                Debug.LogWarning("Unknown app state received: " + appName);
-                if (standbyPanel) standbyPanel.SetActive(true); // Default fallback
-                break;
+            thumbstickClick.action.started += OnThumbstickPress;
+            thumbstickClick.action.canceled += OnThumbstickRelease;
+            thumbstickClick.action.Enable();
+        }
+
+        if (thumbstickAxis != null)
+        {
+            thumbstickAxis.action.Enable();
         }
     }
 
-    private void DisableAllPanels()
+    private void OnDisable()
     {
-        if (standbyPanel) standbyPanel.SetActive(false);
-        if (spotifyPanel) spotifyPanel.SetActive(false);
-        if (scannerPanel) scannerPanel.SetActive(false);
-        if (combatPanel) combatPanel.SetActive(false);
-        if (tomodatchiPanel) tomodatchiPanel.SetActive(false);
-        if (forwardRightPanel) forwardRightPanel.SetActive(false);
-        if (forwardLeftPanel) forwardLeftPanel.SetActive(false);
-        if (backLeftPanel) backLeftPanel.SetActive(false);
-        if (backRightPanel) backRightPanel.SetActive(false);
+        if (thumbstickClick != null)
+        {
+            thumbstickClick.action.started -= OnThumbstickPress;
+            thumbstickClick.action.canceled -= OnThumbstickRelease;
+            thumbstickClick.action.Disable();
+        }
+
+        if (thumbstickAxis != null)
+        {
+            thumbstickAxis.action.Disable();
+        }
+    }
+
+    private void Start()
+    {
+        // Hide all apps on boot
+        HideAllApps();
+    }
+
+    private void Update()
+    {
+        // If the user is holding down the thumbstick, read the axis for radial selection
+        if (isThumbstickPressed && !appSwitchedDuringPress)
+        {
+            Vector2 axisValue = thumbstickAxis.action.ReadValue<Vector2>();
+
+            // If pushed far enough in a direction (deadzone of 0.6)
+            if (axisValue.magnitude > 0.6f)
+            {
+                DetermineRadialApp(axisValue);
+                appSwitchedDuringPress = true; // Lock in the choice until released
+            }
+        }
+    }
+
+    private void OnThumbstickPress(InputAction.CallbackContext context)
+    {
+        isThumbstickPressed = true;
+        appSwitchedDuringPress = false;
+    }
+
+    private void OnThumbstickRelease(InputAction.CallbackContext context)
+    {
+        isThumbstickPressed = false;
+
+        // If we just clicked and released without pushing a direction, Talk to Margo!
+        if (!appSwitchedDuringPress)
+        {
+            Debug.Log("[AppStateManager] Margo Voice Activated!");
+            OnMargoActivated?.Invoke();
+            // You can link your PhoneElevenLabsTTS or SttToggle to this UnityEvent in the Inspector!
+        }
+    }
+
+    private void DetermineRadialApp(Vector2 axis)
+    {
+        HideAllApps();
+
+        // Calculate angle or use simple absolute values to determine quadrant
+        if (Mathf.Abs(axis.y) > Mathf.Abs(axis.x))
+        {
+            // Vertical movement
+            if (axis.y > 0) SwitchApp(spellCanvas);     // UP = Spells
+            else SwitchApp(combatCanvas);               // DOWN = Combat HUD
+        }
+        else
+        {
+            // Horizontal movement
+            if (axis.x > 0) SwitchApp(scannerCanvas);   // RIGHT = Scanner
+            else SwitchApp(spotifyCanvas);              // LEFT = Spotify
+        }
+    }
+
+    private void SwitchApp(GameObject appCanvas)
+    {
+        if (appCanvas == null) return;
+        
+        currentActiveApp = appCanvas;
+        currentActiveApp.SetActive(true);
+        Debug.Log($"[AppStateManager] Switched to App: {appCanvas.name}");
+    }
+
+    private void HideAllApps()
+    {
+        if (spellCanvas != null) spellCanvas.SetActive(false);
+        if (spotifyCanvas != null) spotifyCanvas.SetActive(false);
+        if (scannerCanvas != null) scannerCanvas.SetActive(false);
+        if (combatCanvas != null) combatCanvas.SetActive(false);
     }
 }
