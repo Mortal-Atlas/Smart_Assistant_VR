@@ -11,7 +11,6 @@ public class RikaCommand
 
 public class MqttQuestBridge : M2MqttUnityClient
 {
-    // --- SINGLETON & EVENTS ---
     public static MqttQuestBridge Instance { get; private set; }
     public static event System.Action<string> OnSpotifyStateUpdated;
     public static event System.Action<string> OnTouchDataReceived;
@@ -20,19 +19,20 @@ public class MqttQuestBridge : M2MqttUnityClient
     public static event System.Action<string> OnAppSwitched;
     public static event System.Action<Vector2> OnFishingCastReceived;
     public static event System.Action<string> OnCombatInputReceived;
+    public static event System.Action<string> OnPetActionReceived;
 
     [Header("Margo Integration")]
     [Tooltip("Drag the GameObject with the RikaAgent script here")]
-    public RikaAgent rikaAgent; 
+    public GameObject rikaAgent; // Using GameObject to avoid missing script errors
     
-    [Tooltip("Drag the GameObject with the RikaChatController script here")]
-    public RikaChatController chatController;
+    [Tooltip("Drag the GameObject with the ChatController script here")]
+    public GameObject chatController;
 
     [Tooltip("Drag the GameObject with the AppStateManager script here")]
-    public AppStateManager appStateManager;
+    public GameObject appStateManager;
 
     [Tooltip("Drag the GameObject with the GeminiManager script here")]
-    public GeminiManager geminiManager;
+    public GameObject geminiManager;
 
     [Header("Controls")]
     [Tooltip("Input Action for Right Thumbstick Click (Press)")]
@@ -43,25 +43,22 @@ public class MqttQuestBridge : M2MqttUnityClient
     [Tooltip("How far the thumbstick must be pushed upon release to trigger an app switch (0.0 to 1.0)")]
     public float thumbstickDeadzone = 0.5f;
 
-    // State tracking for the press-and-hold radial menu gesture
     private bool wasPressingThumbstick = false;
+    private bool wasHeadsetOnFace = true;
 
     protected override void Awake()
     {
-        // Enforce Singleton pattern so any script can access the network effortlessly
         if (Instance != null && Instance != this) 
         {
             Destroy(this.gameObject);
             return;
         }
         Instance = this;
-        
         base.Awake();
     }
 
     private void OnEnable()
     {
-        // Enable input actions safely
         if (rightThumbstickClick != null && rightThumbstickClick.action != null)
             rightThumbstickClick.action.Enable();
             
@@ -71,7 +68,6 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     private void OnDisable()
     {
-        // Disable input actions safely to avoid memory leaks
         if (rightThumbstickClick != null && rightThumbstickClick.action != null)
             rightThumbstickClick.action.Disable();
             
@@ -81,14 +77,32 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     protected override void Start()
     {
-        // Let the base class handle its own startup sequence normally.
         base.Start();
     }
 
     protected override void Update()
     {
-        base.Update(); // Required for M2MqttUnityClient network processing on main thread
+        base.Update(); 
         HandleThumbstickInput();
+        MonitorHeadsetProximity();
+    }
+
+    private void MonitorHeadsetProximity()
+    {
+        bool isHeadsetOnFace = OVRPlugin.userPresent;
+
+        if (isHeadsetOnFace && !wasHeadsetOnFace)
+        {
+            Debug.Log("[VR Status] Headset mounted. Telling phone to enter Trackpad Mode.");
+            PublishMessage(MargoTopics.VRStatus, "online", false); 
+        }
+        else if (!isHeadsetOnFace && wasHeadsetOnFace)
+        {
+            Debug.Log("[VR Status] Headset removed. Telling phone to show Buttons.");
+            PublishMessage(MargoTopics.VRStatus, "offline", false); 
+        }
+
+        wasHeadsetOnFace = isHeadsetOnFace;
     }
 
     private void HandleThumbstickInput()
@@ -96,16 +110,13 @@ public class MqttQuestBridge : M2MqttUnityClient
         if (rightThumbstickClick == null || rightThumbstickAxis == null) return;
         if (rightThumbstickClick.action == null || rightThumbstickAxis.action == null) return;
 
-        // Read the current state of the thumbstick click and directional axis
         bool isPressed = rightThumbstickClick.action.ReadValue<float>() > 0.5f;
         Vector2 currentAxis = rightThumbstickAxis.action.ReadValue<Vector2>();
 
-        // 1. Just pressed down: Always prompt Margo immediately
         if (isPressed && !wasPressingThumbstick)
         {
             ActivateRika();
         }
-        // 2. Just released: Read the coordinate at the exact time of release
         else if (!isPressed && wasPressingThumbstick)
         {
             if (currentAxis.magnitude > thumbstickDeadzone)
@@ -122,42 +133,26 @@ public class MqttQuestBridge : M2MqttUnityClient
         Debug.Log("Thumbstick Pressed: Activating Margo!");
         if (rikaAgent != null)
         {
-            rikaAgent.Materialize();
+            rikaAgent.SendMessage("Materialize", SendMessageOptions.DontRequireReceiver);
         }
-        
-        // Use our new clean helper!
         PublishMessage(MargoTopics.VoiceListen, "start");
     }
 
     private void HandleDirectionalRelease(Vector2 axis)
     {
         string appState = "Standby";
-
-        // Calculate the angle of the thumbstick (-180 to 180 degrees)
-        // 0 is Right, 90 is Forward(Up), 180/-180 is Left, -90 is Back(Down)
         float angle = Mathf.Atan2(axis.y, axis.x) * Mathf.Rad2Deg;
 
-        // 8-Way Directional mapping
-        if (angle > -22.5f && angle <= 22.5f) 
-            appState = "Spotify"; // Right
-        else if (angle > 22.5f && angle <= 67.5f) 
-            appState = "App_ForwardRight"; // Forward-Right (Placeholder)
-        else if (angle > 67.5f && angle <= 112.5f) 
-            appState = "Combat"; // Forward
-        else if (angle > 112.5f && angle <= 157.5f) 
-            appState = "App_ForwardLeft"; // Forward-Left (Placeholder)
-        else if (angle > 157.5f || angle <= -157.5f) 
-            appState = "Scanner"; // Left
-        else if (angle > -157.5f && angle <= -112.5f) 
-            appState = "App_BackLeft"; // Back-Left (Placeholder)
-        else if (angle > -112.5f && angle <= -67.5f) 
-            appState = "Tomodatchi"; // Back
-        else if (angle > -67.5f && angle <= -22.5f) 
-            appState = "App_BackRight"; // Back-Right (Placeholder)
+        if (angle > -22.5f && angle <= 22.5f) appState = "Spotify"; 
+        else if (angle > 22.5f && angle <= 67.5f) appState = "App_ForwardRight"; 
+        else if (angle > 67.5f && angle <= 112.5f) appState = "Combat"; 
+        else if (angle > 112.5f && angle <= 157.5f) appState = "App_ForwardLeft"; 
+        else if (angle > 157.5f || angle <= -157.5f) appState = "Scanner"; 
+        else if (angle > -157.5f && angle <= -112.5f) appState = "App_BackLeft"; 
+        else if (angle > -112.5f && angle <= -67.5f) appState = "Tomodatchi"; 
+        else if (angle > -67.5f && angle <= -22.5f) appState = "App_BackRight"; 
 
         Debug.Log($"Thumbstick Released at angle {angle:F1}: Changing App State to {appState}");
-        
-        // Publish the state change to the MQTT broker
         PublishMessage(MargoTopics.AppSwitch, appState, true);
     }
 
@@ -165,57 +160,42 @@ public class MqttQuestBridge : M2MqttUnityClient
     {
         base.OnConnected();
         
-        // Subscribed using centralized MargoTopics instead of hardcoded strings
-        client.Subscribe(new string[] { MargoTopics.Commands, MargoTopics.AIResponse, MargoTopics.VoiceInput, MargoTopics.AppSwitch, MargoTopics.VisionResult, MargoTopics.SpotifyState, MargoTopics.PhoneTouch, MargoTopics.PetState, MargoTopics.FishingCast, MargoTopics.CombatInput }, 
-            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
+        client.Subscribe(new string[] { MargoTopics.Commands, MargoTopics.AIResponse, MargoTopics.VoiceInput, MargoTopics.AppSwitch, MargoTopics.VisionResult, MargoTopics.SpotifyState, MargoTopics.PhoneTouch, MargoTopics.PetState, MargoTopics.FishingCast, MargoTopics.CombatInput, MargoTopics.PetAction, "vr/status/ping" }, 
+            new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         
-        // Broadcast that the VR headset is online and RETAIN the message
-        PublishMessage(MargoTopics.VRStatus, "online", true);
-        
+        PublishMessage(MargoTopics.VRStatus, "online", false);
         Debug.Log("Connected to the Margo Message Bus! Waiting for commands...");
     }
 
     protected override void OnApplicationQuit()
     {
-        // Be nice and tell the phone we're offline when closing the VR app
-        PublishMessage(MargoTopics.VRStatus, "offline", true);
+        PublishMessage(MargoTopics.VRStatus, "offline", false);
         base.OnApplicationQuit();
     }
 
     protected override void DecodeMessage(string topic, byte[] message)
     {
         string msg = System.Text.Encoding.UTF8.GetString(message);
-        Debug.Log("Raw message received on " + topic + ": " + msg);
         
-        if (topic == MargoTopics.Commands)
+        if (topic == "vr/status/ping")
         {
-            try 
+            if (OVRPlugin.userPresent)
+            {
+                PublishMessage(MargoTopics.VRStatus, "online", false);
+            }
+        }
+        else if (topic == MargoTopics.Commands)
+        {
+            try
             {
                 RikaCommand data = JsonUtility.FromJson<RikaCommand>(msg);
-                
                 if (data != null && data.command == "materialize") 
                 {
-                    // MUST push to main thread to modify Unity GameObjects and Transforms!
-                    UnityMainThreadDispatcher.Instance().Enqueue(() => 
-                    {
-                        if (rikaAgent != null) 
-                        {
-                            Debug.Log("Materializing Rika!");
-                            rikaAgent.Materialize();
-                        } 
-                    });
+                    if (rikaAgent != null) rikaAgent.SendMessage("Materialize", SendMessageOptions.DontRequireReceiver);
                 }
                 else if (data != null && data.command == "poof") 
                 {
-                    // MUST push to main thread!
-                    UnityMainThreadDispatcher.Instance().Enqueue(() => 
-                    {
-                        if (rikaAgent != null) 
-                        {
-                            Debug.Log("Poofing Rika away!");
-                            rikaAgent.PoofAway();
-                        }
-                    });
+                    if (rikaAgent != null) rikaAgent.SendMessage("PoofAway", SendMessageOptions.DontRequireReceiver);
                 }
             }
             catch (System.Exception e)
@@ -225,82 +205,56 @@ public class MqttQuestBridge : M2MqttUnityClient
         } 
         else if (topic == MargoTopics.VoiceInput)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                if (chatController != null) chatController.OnMqttMessageReceived("\n\nUser: " + msg);
-                OnVoiceInputReceived?.Invoke(msg);
-            });
+            if (chatController != null) chatController.SendMessage("OnMqttMessageReceived", "\n\nUser: " + msg, SendMessageOptions.DontRequireReceiver);
+            OnVoiceInputReceived?.Invoke(msg);
         }
         else if (topic == MargoTopics.AIResponse)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                if (chatController != null) chatController.OnMqttMessageReceived("\n\nMargo: " + msg);
-            });
+            if (chatController != null) chatController.SendMessage("OnMqttMessageReceived", "\n\nMargo: " + msg, SendMessageOptions.DontRequireReceiver);
         }
         else if (topic == MargoTopics.AppSwitch)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                if (appStateManager != null) appStateManager.SwitchApp(msg);
-                OnAppSwitched?.Invoke(msg);
-            });
+            if (appStateManager != null) appStateManager.SendMessage("SwitchApp", msg, SendMessageOptions.DontRequireReceiver);
+            OnAppSwitched?.Invoke(msg);
         }
         else if (topic == MargoTopics.VisionResult)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                if (geminiManager != null) geminiManager.UpdateScanResult(msg);
-            });
+            if (geminiManager != null) geminiManager.SendMessage("UpdateScanResult", msg, SendMessageOptions.DontRequireReceiver);
         }
         else if (topic == MargoTopics.SpotifyState)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                // We broadcast this to ANY script listening, fully decoupling the UI!
-                OnSpotifyStateUpdated?.Invoke(msg);
-            });
+            OnSpotifyStateUpdated?.Invoke(msg);
         }
         else if (topic == MargoTopics.PhoneTouch)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                OnTouchDataReceived?.Invoke(msg);
-            });
+            OnTouchDataReceived?.Invoke(msg);
         }
         else if (topic == MargoTopics.PetState)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                OnPetStateReceived?.Invoke(msg);
-            });
+            OnPetStateReceived?.Invoke(msg);
         }
         else if (topic == MargoTopics.FishingCast)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
+            try
             {
-                try
-                {
-                    // Convert the raw X,Y string payload directly into a Unity Vector2
-                    Vector2 velocity = JsonUtility.FromJson<Vector2>(msg);
-                    OnFishingCastReceived?.Invoke(velocity);
-                }
-                catch (System.Exception e)
-                {
-                    Debug.LogError("Failed to parse Fishing Cast JSON: " + e.Message);
-                }
-            });
+                Vector2 velocity = JsonUtility.FromJson<Vector2>(msg);
+                OnFishingCastReceived?.Invoke(velocity);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError("Failed to parse Fishing Cast JSON: " + e.Message);
+            }
         }
         else if (topic == MargoTopics.CombatInput)
         {
-            UnityMainThreadDispatcher.Instance().Enqueue(() => 
-            {
-                OnCombatInputReceived?.Invoke(msg);
-            });
+            OnCombatInputReceived?.Invoke(msg);
+        }
+        else if (topic == MargoTopics.PetAction)
+        {
+            OnPetActionReceived?.Invoke(msg);
         }
     }
 
-    // --- CLEAN PUBLISH HELPER ---
     public void PublishMessage(string topic, string payload, bool retain = false)
     {
         if (client != null && client.IsConnected)

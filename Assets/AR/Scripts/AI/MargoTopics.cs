@@ -20,6 +20,7 @@ public static class MargoTopics
     public const string PetState = "rika/pet/state";
     public const string CombatInput = "rika/game/combat";
     public const string FishingCast = "rika/game/fishing/cast";
+    public const string PetAction = "rika/pet/action";
     
     // System
     public const string VRStatus = "vr/status";

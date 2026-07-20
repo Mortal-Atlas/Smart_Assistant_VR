@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7767824807863388181}
   - component: {fileID: 5144833739997544790}
   m_Layer: 0
-  m_Name: Kindred Poof Particle
+  m_Name: AI Assistant Poof Particle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
