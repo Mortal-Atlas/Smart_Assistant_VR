@@ -1,6 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using Meta.XR.MRUtilityKit;
+using UnityEngine.UI; // NEW: Needed for the Health Bar Image
+using TMPro;          // NEW: Needed for the Name/Level Text
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Animator))]
@@ -9,8 +11,14 @@ public class AREnemy : MonoBehaviour, IDamageable
 {
     [Header("Enemy Stats")]
     public string enemyName = "Skeleton";
+    public int level = 1;
     public float maxHealth = 100f;
     private float currentHealth;
+
+    [Header("Enemy UI")]
+    public Image healthBarFill;  // Drag the Red Fill Image here
+    public TMP_Text nameText;    // Drag the Name Text object here
+    public TMP_Text levelText;   // NEW: Drag the Level Text object here
 
     [Header("Movement & Combat")]
     public float walkSpeed = 1.0f;
@@ -37,6 +45,18 @@ public class AREnemy : MonoBehaviour, IDamageable
         anim = GetComponent<Animator>();
         rb = GetComponent<Rigidbody>();
         
+        // Setup the UI above their head
+        if (nameText != null) 
+        {
+            nameText.text = enemyName;
+        }
+        if (levelText != null)
+        {
+            levelText.text = $"Lv.{level}";
+        }
+        
+        UpdateHealthUI();
+
         // Physics Settings for Skeletons
         rb.isKinematic = true; 
         rb.useGravity = false;
@@ -204,6 +224,8 @@ public class AREnemy : MonoBehaviour, IDamageable
         if (currentState == State.Dead) return;
 
         currentHealth -= amount;
+        UpdateHealthUI(); // NEW: Shrink the health bar when hit!
+        
         anim.SetTrigger("Hit");
 
         if (currentHealth <= 0)
@@ -223,5 +245,14 @@ public class AREnemy : MonoBehaviour, IDamageable
         GetComponent<CapsuleCollider>().enabled = false;
         
         Destroy(gameObject, 3f); 
+    }
+
+    // NEW: Helper method to update the visual bar
+    private void UpdateHealthUI()
+    {
+        if (healthBarFill != null)
+        {
+            healthBarFill.fillAmount = Mathf.Clamp01(currentHealth / maxHealth);
+        }
     }
 }

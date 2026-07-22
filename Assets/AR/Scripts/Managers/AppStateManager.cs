@@ -10,16 +10,30 @@ public class AppStateManager : MonoBehaviour
     public InputActionReference thumbstickClick;
     public InputActionReference thumbstickAxis;
 
-    [Header("App Canvases")]
-    public GameObject spellCanvas;
-    public GameObject spotifyCanvas;
-    public GameObject scannerCanvas;
-    public GameObject combatCanvas;
+    [Header("App Canvases (8-Way Directional)")]
+    public GameObject appForward;        // UP
+    public GameObject appRightForward;   // UP-RIGHT
+    public GameObject appRight;          // RIGHT
+    public GameObject appRightBack;      // DOWN-RIGHT
+    public GameObject appBack;           // DOWN
+    public GameObject appLeftBack;       // DOWN-LEFT
+    public GameObject appLeft;           // LEFT
+    public GameObject appLeftForward;    // UP-LEFT
+
+    [Header("Radial Highlights (8-Way Directional)")]
+    public GameObject highlightForward;
+    public GameObject highlightRightForward;
+    public GameObject highlightRight;
+    public GameObject highlightRightBack;
+    public GameObject highlightBack;
+    public GameObject highlightLeftBack;
+    public GameObject highlightLeft;
+    public GameObject highlightLeftForward;
 
     [Header("Margo Summoning")]
     [Tooltip("The 3D model of Margo to materialize in your room")]
     public GameObject margoModel;
-    [Tooltip("Fires when the thumbstick is clicked and held for 0.5s")]
+    [Tooltip("Fires when the thumbstick is clicked and held for 0.3s")]
     public UnityEvent OnMargoActivated;
     
     private float pressTimer = 0f;
@@ -61,6 +75,7 @@ public class AppStateManager : MonoBehaviour
     private void Start()
     {
         HideAllApps();
+        ClearHighlights();
         if (margoModel != null) margoModel.SetActive(false); // Hide Margo on boot
     }
 
@@ -71,21 +86,27 @@ public class AppStateManager : MonoBehaviour
             Vector2 axisValue = thumbstickAxis.action.ReadValue<Vector2>();
 
             // 1. RADIAL MENU HOVER
-            if (axisValue.magnitude > 0.6f)
+            if (axisValue.magnitude > 0.5f)
             {
                 DetermineRadialApp(axisValue);
                 appSwitchedDuringPress = true; 
             }
-            // 2. MARGO SUMMON TIMER (If holding still)
-            else if (!appSwitchedDuringPress && !margoSummonedThisPress)
+            else
             {
-                pressTimer += Time.deltaTime;
-                
-                // If held for 0.5 seconds with no direction push, summon her!
-                if (pressTimer >= 0.5f)
+                // Clear highlights if resting in the middle
+                ClearHighlights();
+
+                // 2. MARGO SUMMON TIMER (If holding still)
+                if (!appSwitchedDuringPress && !margoSummonedThisPress)
                 {
-                    SummonMargo();
-                    margoSummonedThisPress = true;
+                    pressTimer += Time.deltaTime;
+                    
+                    // Reduced to 0.3s so it feels much more responsive!
+                    if (pressTimer >= 0.3f)
+                    {
+                        SummonMargo();
+                        margoSummonedThisPress = true;
+                    }
                 }
             }
         }
@@ -102,6 +123,7 @@ public class AppStateManager : MonoBehaviour
     private void OnThumbstickRelease(InputAction.CallbackContext context)
     {
         isThumbstickPressed = false;
+        ClearHighlights(); // Turn off the hover visuals when you let go
     }
 
     private void SummonMargo()
@@ -133,16 +155,52 @@ public class AppStateManager : MonoBehaviour
     private void DetermineRadialApp(Vector2 axis)
     {
         HideAllApps();
+        ClearHighlights();
 
-        if (Mathf.Abs(axis.y) > Mathf.Abs(axis.x))
+        // 1. Calculate angle from -180 to 180 degrees
+        float angle = Mathf.Atan2(axis.y, axis.x) * Mathf.Rad2Deg;
+        
+        // 2. Normalize angle to 0-360 for easier division
+        if (angle < 0) angle += 360f;
+
+        // 3. Divide 360 degrees into 8 slices of 45 degrees each.
+        // Adding 22.5 to the offset ensures the slices are perfectly centered on the joystick axes.
+        int slice = Mathf.RoundToInt(angle / 45f) % 8;
+
+        switch (slice)
         {
-            if (axis.y > 0) SwitchApp(spellCanvas);     // UP = Spells
-            else SwitchApp(combatCanvas);               // DOWN = Combat HUD
-        }
-        else
-        {
-            if (axis.x > 0) SwitchApp(scannerCanvas);   // RIGHT = Scanner
-            else SwitchApp(spotifyCanvas);              // LEFT = Spotify
+            case 0: // RIGHT
+                if (highlightRight != null) highlightRight.SetActive(true);
+                SwitchApp(appRight);
+                break;
+            case 1: // UP-RIGHT (Right Forward)
+                if (highlightRightForward != null) highlightRightForward.SetActive(true);
+                SwitchApp(appRightForward);
+                break;
+            case 2: // UP (Forward)
+                if (highlightForward != null) highlightForward.SetActive(true);
+                SwitchApp(appForward);
+                break;
+            case 3: // UP-LEFT (Left Forward)
+                if (highlightLeftForward != null) highlightLeftForward.SetActive(true);
+                SwitchApp(appLeftForward);
+                break;
+            case 4: // LEFT
+                if (highlightLeft != null) highlightLeft.SetActive(true);
+                SwitchApp(appLeft);
+                break;
+            case 5: // DOWN-LEFT (Left Back)
+                if (highlightLeftBack != null) highlightLeftBack.SetActive(true);
+                SwitchApp(appLeftBack);
+                break;
+            case 6: // DOWN (Back)
+                if (highlightBack != null) highlightBack.SetActive(true);
+                SwitchApp(appBack);
+                break;
+            case 7: // DOWN-RIGHT (Right Back)
+                if (highlightRightBack != null) highlightRightBack.SetActive(true);
+                SwitchApp(appRightBack);
+                break;
         }
     }
 
@@ -155,9 +213,25 @@ public class AppStateManager : MonoBehaviour
 
     private void HideAllApps()
     {
-        if (spellCanvas != null) spellCanvas.SetActive(false);
-        if (spotifyCanvas != null) spotifyCanvas.SetActive(false);
-        if (scannerCanvas != null) scannerCanvas.SetActive(false);
-        if (combatCanvas != null) combatCanvas.SetActive(false);
+        if (appForward != null) appForward.SetActive(false);
+        if (appRightForward != null) appRightForward.SetActive(false);
+        if (appRight != null) appRight.SetActive(false);
+        if (appRightBack != null) appRightBack.SetActive(false);
+        if (appBack != null) appBack.SetActive(false);
+        if (appLeftBack != null) appLeftBack.SetActive(false);
+        if (appLeft != null) appLeft.SetActive(false);
+        if (appLeftForward != null) appLeftForward.SetActive(false);
+    }
+
+    private void ClearHighlights()
+    {
+        if (highlightForward != null) highlightForward.SetActive(false);
+        if (highlightRightForward != null) highlightRightForward.SetActive(false);
+        if (highlightRight != null) highlightRight.SetActive(false);
+        if (highlightRightBack != null) highlightRightBack.SetActive(false);
+        if (highlightBack != null) highlightBack.SetActive(false);
+        if (highlightLeftBack != null) highlightLeftBack.SetActive(false);
+        if (highlightLeft != null) highlightLeft.SetActive(false);
+        if (highlightLeftForward != null) highlightLeftForward.SetActive(false);
     }
 }

@@ -8,21 +8,19 @@ using System.Linq;
 [RequireComponent(typeof(FamiliarController))] 
 public class FamiliarAI : MonoBehaviour
 {
-    [Header("VR Input Bindings (Right Controller)")]
+    [Header("VR Input Bindings")]
+    [Tooltip("Bind to Left Thumbstick")]
     public InputActionReference moveAction;    
+    [Tooltip("Bind to Right Controller 'A' Button")]
     public InputActionReference attackAction;  
-    public InputActionReference jumpAction;    
-    public InputActionReference dashAction;   
-    
-    // NEW: Special Attack Binding! (Recommend mapping this to X/Y or Left Trigger) 
-    public InputActionReference specialAttackAction; 
+    [Tooltip("Bind to Right Controller 'B' Button")]
+    public InputActionReference defendAction;    
+    [Tooltip("Bind to Right Grip (or Thumbstick Click) to Lock On")]
+    public InputActionReference lockOnAction;   
 
     [Header("Movement Settings")]
     public float baseMoveSpeed = 3.0f;
-    public float dashSpeedMultiplier = 2.5f;
     public float exhaustedSpeed = 0.8f;
-    public float dashDuration = 0.3f;
-    public float jumpForce = 5.0f;
     public float gravity = -9.81f;
 
     [Header("Z-Targeting Settings")]
@@ -34,12 +32,9 @@ public class FamiliarAI : MonoBehaviour
     private Transform mainCamera;
 
     private float verticalVelocity;
-    private bool isDashing = false;
-    private float dashTimer = 0f;
 
     private Transform currentTarget = null;
     private List<AREnemy> availableTargets = new List<AREnemy>();
-    private int currentTargetIndex = -1;
 
     void Awake()
     {
@@ -58,21 +53,12 @@ public class FamiliarAI : MonoBehaviour
             attackAction.action.Enable();
             attackAction.action.performed += OnAttackPressed;
         }
-        if (jumpAction != null)
+        if (lockOnAction != null)
         {
-            jumpAction.action.Enable();
-            jumpAction.action.performed += OnJumpPressed;
+            lockOnAction.action.Enable();
+            lockOnAction.action.performed += OnLockOnPressed;
         }
-        if (dashAction != null)
-        {
-            dashAction.action.Enable();
-            dashAction.action.performed += OnDashPressed;
-        }
-        if (specialAttackAction != null)
-        {
-            specialAttackAction.action.Enable();
-            specialAttackAction.action.performed += OnSpecialAttackPressed;
-        }
+        if (defendAction != null) defendAction.action.Enable();
     }
 
     void OnDisable()
@@ -83,26 +69,29 @@ public class FamiliarAI : MonoBehaviour
             attackAction.action.Disable();
             attackAction.action.performed -= OnAttackPressed;
         }
-        if (jumpAction != null)
+        if (lockOnAction != null)
         {
-            jumpAction.action.Disable();
-            jumpAction.action.performed -= OnJumpPressed;
+            lockOnAction.action.Disable();
+            lockOnAction.action.performed -= OnLockOnPressed;
         }
-        if (dashAction != null)
-        {
-            dashAction.action.Disable();
-            dashAction.action.performed -= OnDashPressed;
-        }
-        if (specialAttackAction != null)
-        {
-            specialAttackAction.action.Disable();
-            specialAttackAction.action.performed -= OnSpecialAttackPressed;
-        }
+        if (defendAction != null) defendAction.action.Disable();
     }
 
     void Update()
     {
-        HandleDashTimer();
+        // 1. Handle Defend Button (Held down)
+        if (defendAction != null && statsController != null)
+        {
+            bool isHoldingDefend = defendAction.action.IsPressed();
+            statsController.SetDefending(isHoldingDefend);
+        }
+
+        // 2. Validate Target (Drop target if it dies)
+        if (currentTarget != null && !currentTarget.gameObject.activeInHierarchy)
+        {
+            currentTarget = null;
+        }
+
         HandleMovementAndGravity();
     }
 
@@ -111,49 +100,54 @@ public class FamiliarAI : MonoBehaviour
         Vector2 inputDir = moveAction != null ? moveAction.action.ReadValue<Vector2>() : Vector2.zero;
         Vector3 moveVector = Vector3.zero;
 
-        if (currentTarget != null)
-        {
-            Vector3 lookDir = (currentTarget.position - transform.position).normalized;
-            lookDir.y = 0; 
-            if (lookDir != Vector3.zero)
-            {
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * rotationSpeed);
-            }
-            moveVector = transform.right * inputDir.x + transform.forward * inputDir.y;
-        }
-        else
-        {
-            if (mainCamera != null)
-            {
-                Vector3 camForward = mainCamera.forward;
-                Vector3 camRight = mainCamera.right;
-                camForward.y = 0; 
-                camRight.y = 0;
-                camForward.Normalize();
-                camRight.Normalize();
+        // Block movement if actively defending and not exhausted
+        bool canMove = statsController == null || !statsController.isDefending;
 
-                moveVector = camRight * inputDir.x + camForward * inputDir.y;
-
-                if (moveVector != Vector3.zero)
+        if (canMove)
+        {
+            if (currentTarget != null)
+            {
+                // Z-TARGETING STRAFE
+                Vector3 lookDir = (currentTarget.position - transform.position).normalized;
+                lookDir.y = 0; 
+                if (lookDir != Vector3.zero)
                 {
-                    Quaternion targetRot = Quaternion.LookRotation(moveVector);
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSpeed);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(lookDir), Time.deltaTime * rotationSpeed);
+                }
+                moveVector = transform.right * inputDir.x + transform.forward * inputDir.y;
+            }
+            else
+            {
+                // FREE ROAM
+                if (mainCamera != null)
+                {
+                    Vector3 camForward = mainCamera.forward;
+                    Vector3 camRight = mainCamera.right;
+                    camForward.y = 0; 
+                    camRight.y = 0;
+                    camForward.Normalize();
+                    camRight.Normalize();
+
+                    moveVector = camRight * inputDir.x + camForward * inputDir.y;
+
+                    if (moveVector != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(moveVector);
+                        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSpeed);
+                    }
                 }
             }
         }
 
         float currentSpeed = baseMoveSpeed;
-        
         if (statsController != null && statsController.isExhausted)
         {
             currentSpeed = exhaustedSpeed;
-            isDashing = false; 
             animator.speed = 0.6f;
         }
         else 
         {
             animator.speed = 1.0f;
-            if (isDashing) currentSpeed = baseMoveSpeed * dashSpeedMultiplier;
         }
 
         moveVector *= currentSpeed;
@@ -179,99 +173,36 @@ public class FamiliarAI : MonoBehaviour
 
     private void OnAttackPressed(InputAction.CallbackContext context)
     {
-        // Renamed to match our new combo system!
-        if (statsController != null) statsController.ExecuteMeleeAttack(); 
-    }
-
-    private void OnSpecialAttackPressed(InputAction.CallbackContext context)
-    {
-        // Fires the mana-draining spin attack!
-        if (statsController != null) statsController.ExecuteSpinAttack();
-    }
-
-    private void OnJumpPressed(InputAction.CallbackContext context)
-    {
-        if (controller.isGrounded && statsController != null && !statsController.isExhausted)
+        // Don't allow attacking while holding the shield up
+        if (statsController != null && !statsController.isDefending) 
         {
-            verticalVelocity = jumpForce;
-            animator.SetTrigger("Jump"); 
+            statsController.ExecuteMeleeAttack(); 
         }
     }
 
-    private void OnDashPressed(InputAction.CallbackContext context)
-    {
-        if (!isDashing && controller.isGrounded)
-        {
-            if (statsController != null && statsController.TryUseStamina(20f))
-            {
-                isDashing = true;
-                dashTimer = dashDuration;
-            }
-        }
-    }
-
-    private void HandleDashTimer()
-    {
-        if (isDashing)
-        {
-            dashTimer -= Time.deltaTime;
-            if (dashTimer <= 0)
-            {
-                isDashing = false;
-            }
-        }
-    }
-
-    public void ToggleLockOn()
+    private void OnLockOnPressed(InputAction.CallbackContext context)
     {
         if (currentTarget != null)
         {
             currentTarget = null;
-            currentTargetIndex = -1;
+            Debug.Log("Unlocked Target");
         }
         else
         {
-            RefreshTargetList();
+            availableTargets = FindObjectsByType<AREnemy>(FindObjectsSortMode.None).ToList();
+            availableTargets.RemoveAll(enemy => enemy == null || !enemy.gameObject.activeInHierarchy);
+            
             if (availableTargets.Count > 0)
             {
-                currentTargetIndex = 0;
-                currentTarget = availableTargets[currentTargetIndex].transform;
+                // Find closest
+                availableTargets.Sort((a, b) => 
+                    Vector3.Distance(transform.position, a.transform.position)
+                    .CompareTo(Vector3.Distance(transform.position, b.transform.position))
+                );
+                
+                currentTarget = availableTargets[0].transform;
+                Debug.Log($"Locked onto: {availableTargets[0].enemyName}");
             }
         }
-    }
-
-    public void CycleTargetLeft()
-    {
-        if (currentTarget == null) return;
-        RefreshTargetList();
-        if (availableTargets.Count <= 1) return;
-
-        currentTargetIndex--;
-        if (currentTargetIndex < 0) currentTargetIndex = availableTargets.Count - 1; 
-
-        currentTarget = availableTargets[currentTargetIndex].transform;
-    }
-
-    public void CycleTargetRight()
-    {
-        if (currentTarget == null) return;
-        RefreshTargetList();
-        if (availableTargets.Count <= 1) return;
-
-        currentTargetIndex++;
-        if (currentTargetIndex >= availableTargets.Count) currentTargetIndex = 0; 
-
-        currentTarget = availableTargets[currentTargetIndex].transform;
-    }
-
-    private void RefreshTargetList()
-    {
-        availableTargets = Object.FindObjectsByType<AREnemy>(FindObjectsSortMode.None).ToList();
-        
-        availableTargets.RemoveAll(enemy => enemy == null || !enemy.gameObject.activeInHierarchy);
-        availableTargets.Sort((a, b) => 
-            Vector3.Distance(transform.position, a.transform.position)
-            .CompareTo(Vector3.Distance(transform.position, b.transform.position))
-        );
     }
 }
