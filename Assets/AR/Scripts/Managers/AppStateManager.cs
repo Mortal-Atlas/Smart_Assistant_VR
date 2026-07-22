@@ -7,9 +7,7 @@ public class AppStateManager : MonoBehaviour
     public static AppStateManager Instance { get; private set; }
 
     [Header("Input Bindings (Right Controller)")]
-    [Tooltip("Bind to XRI RightHand/Thumbstick Press")]
     public InputActionReference thumbstickClick;
-    [Tooltip("Bind to XRI RightHand/Primary2DAxis")]
     public InputActionReference thumbstickAxis;
 
     [Header("App Canvases")]
@@ -18,13 +16,16 @@ public class AppStateManager : MonoBehaviour
     public GameObject scannerCanvas;
     public GameObject combatCanvas;
 
-    [Header("Margo Voice Activation")]
-    [Tooltip("Fires when the thumbstick is clicked without being pushed in a direction.")]
+    [Header("Margo Summoning")]
+    [Tooltip("The 3D model of Margo to materialize in your room")]
+    public GameObject margoModel;
+    [Tooltip("Fires when the thumbstick is clicked and held for 0.5s")]
     public UnityEvent OnMargoActivated;
-
-    // Internal state tracking for the radial menu
+    
+    private float pressTimer = 0f;
     private bool isThumbstickPressed = false;
     private bool appSwitchedDuringPress = false;
+    private bool margoSummonedThisPress = false;
     private GameObject currentActiveApp;
 
     private void Awake()
@@ -42,10 +43,7 @@ public class AppStateManager : MonoBehaviour
             thumbstickClick.action.Enable();
         }
 
-        if (thumbstickAxis != null)
-        {
-            thumbstickAxis.action.Enable();
-        }
+        if (thumbstickAxis != null) thumbstickAxis.action.Enable();
     }
 
     private void OnDisable()
@@ -57,30 +55,38 @@ public class AppStateManager : MonoBehaviour
             thumbstickClick.action.Disable();
         }
 
-        if (thumbstickAxis != null)
-        {
-            thumbstickAxis.action.Disable();
-        }
+        if (thumbstickAxis != null) thumbstickAxis.action.Disable();
     }
 
     private void Start()
     {
-        // Hide all apps on boot
         HideAllApps();
+        if (margoModel != null) margoModel.SetActive(false); // Hide Margo on boot
     }
 
     private void Update()
     {
-        // If the user is holding down the thumbstick, read the axis for radial selection
-        if (isThumbstickPressed && !appSwitchedDuringPress)
+        if (isThumbstickPressed)
         {
             Vector2 axisValue = thumbstickAxis.action.ReadValue<Vector2>();
 
-            // If pushed far enough in a direction (deadzone of 0.6)
+            // 1. RADIAL MENU HOVER
             if (axisValue.magnitude > 0.6f)
             {
                 DetermineRadialApp(axisValue);
-                appSwitchedDuringPress = true; // Lock in the choice until released
+                appSwitchedDuringPress = true; 
+            }
+            // 2. MARGO SUMMON TIMER (If holding still)
+            else if (!appSwitchedDuringPress && !margoSummonedThisPress)
+            {
+                pressTimer += Time.deltaTime;
+                
+                // If held for 0.5 seconds with no direction push, summon her!
+                if (pressTimer >= 0.5f)
+                {
+                    SummonMargo();
+                    margoSummonedThisPress = true;
+                }
             }
         }
     }
@@ -89,35 +95,52 @@ public class AppStateManager : MonoBehaviour
     {
         isThumbstickPressed = true;
         appSwitchedDuringPress = false;
+        margoSummonedThisPress = false;
+        pressTimer = 0f;
     }
 
     private void OnThumbstickRelease(InputAction.CallbackContext context)
     {
         isThumbstickPressed = false;
+    }
 
-        // If we just clicked and released without pushing a direction, Talk to Margo!
-        if (!appSwitchedDuringPress)
+    private void SummonMargo()
+    {
+        Debug.Log("[AppStateManager] Margo Materialized!");
+        
+        if (margoModel != null && Camera.main != null)
         {
-            Debug.Log("[AppStateManager] Margo Voice Activated!");
-            OnMargoActivated?.Invoke();
-            // You can link your PhoneElevenLabsTTS or SttToggle to this UnityEvent in the Inspector!
+            // Turn her on
+            margoModel.SetActive(true);
+            
+            // Calculate a spot 1.5 meters exactly in front of the VR headset
+            Transform cam = Camera.main.transform;
+            Vector3 spawnPos = cam.position + (cam.forward * 1.5f);
+            spawnPos.y = cam.position.y - 0.4f; // Drop her slightly so she isn't floating at eye level
+            
+            margoModel.transform.position = spawnPos;
+
+            // Make her look at you
+            Vector3 lookPos = cam.position;
+            lookPos.y = margoModel.transform.position.y; // Keep her standing straight
+            margoModel.transform.LookAt(lookPos);
         }
+
+        // Trigger the AI voice listener
+        OnMargoActivated?.Invoke();
     }
 
     private void DetermineRadialApp(Vector2 axis)
     {
         HideAllApps();
 
-        // Calculate angle or use simple absolute values to determine quadrant
         if (Mathf.Abs(axis.y) > Mathf.Abs(axis.x))
         {
-            // Vertical movement
             if (axis.y > 0) SwitchApp(spellCanvas);     // UP = Spells
             else SwitchApp(combatCanvas);               // DOWN = Combat HUD
         }
         else
         {
-            // Horizontal movement
             if (axis.x > 0) SwitchApp(scannerCanvas);   // RIGHT = Scanner
             else SwitchApp(spotifyCanvas);              // LEFT = Spotify
         }
@@ -126,10 +149,8 @@ public class AppStateManager : MonoBehaviour
     private void SwitchApp(GameObject appCanvas)
     {
         if (appCanvas == null) return;
-        
         currentActiveApp = appCanvas;
         currentActiveApp.SetActive(true);
-        Debug.Log($"[AppStateManager] Switched to App: {appCanvas.name}");
     }
 
     private void HideAllApps()
