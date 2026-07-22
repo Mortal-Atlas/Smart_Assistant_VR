@@ -453,6 +453,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "ThumbstickClick",
+                    "type": "Button",
+                    "id": "ce2004f2-be0c-468c-b4ac-e7c8fd125ea6",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -860,6 +869,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "Thumbstick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "44383e47-e812-4b12-a8cd-bbb90e56b77c",
+                    "path": "<XRController>{LeftHand}/primary2DAxisClick",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ThumbstickClick",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
@@ -1595,6 +1615,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Summon",
+                    "type": "Button",
+                    "id": "c9ddde25-195f-4037-bba3-560301f3461f",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -2013,6 +2042,17 @@
                     "processors": "",
                     "groups": "",
                     "action": "ThumbstickClick",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "ac02a43b-66e2-432d-951c-d3074fc29f6d",
+                    "path": "<XRController>{LeftHand}/menu",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Summon",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

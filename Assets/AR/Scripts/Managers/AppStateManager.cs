@@ -6,9 +6,12 @@ public class AppStateManager : MonoBehaviour
 {
     public static AppStateManager Instance { get; private set; }
 
-    [Header("Input Bindings (Right Controller)")]
-    public InputActionReference thumbstickClick;
+    [Header("Input Bindings")]
+    [Tooltip("Pushing the RIGHT thumbstick to open the radial dial")]
     public InputActionReference thumbstickAxis;
+    
+    [Tooltip("Pressing the LEFT Menu (Options) button to summon Margo")]
+    public InputActionReference summonMargoAction; 
 
     [Header("App Canvases (8-Way Directional)")]
     public GameObject appForward;        // UP
@@ -33,14 +36,13 @@ public class AppStateManager : MonoBehaviour
     [Header("Margo Summoning")]
     [Tooltip("The 3D model of Margo to materialize in your room")]
     public GameObject margoModel;
-    [Tooltip("Fires when the thumbstick is clicked and held for 0.3s")]
+    [Tooltip("The Canvas holding your Radial Dial background or App Selector Menu")]
+    public GameObject appSwapMenuCanvas;
     public UnityEvent OnMargoActivated;
     
-    private float pressTimer = 0f;
-    private bool isThumbstickPressed = false;
-    private bool appSwitchedDuringPress = false;
-    private bool margoSummonedThisPress = false;
     private GameObject currentActiveApp;
+    private bool isDialActive = false;
+    private bool isMenuOpen = false; // NEW: Tracks whether the system menu is on or off
 
     private void Awake()
     {
@@ -50,165 +52,163 @@ public class AppStateManager : MonoBehaviour
 
     private void OnEnable()
     {
-        if (thumbstickClick != null)
-        {
-            thumbstickClick.action.started += OnThumbstickPress;
-            thumbstickClick.action.canceled += OnThumbstickRelease;
-            thumbstickClick.action.Enable();
-        }
-
         if (thumbstickAxis != null) thumbstickAxis.action.Enable();
+        
+        if (summonMargoAction != null)
+        {
+            summonMargoAction.action.Enable();
+            // Instantly summon Margo the moment the button is pressed
+            summonMargoAction.action.performed += SummonMargo;
+        }
     }
 
     private void OnDisable()
     {
-        if (thumbstickClick != null)
-        {
-            thumbstickClick.action.started -= OnThumbstickPress;
-            thumbstickClick.action.canceled -= OnThumbstickRelease;
-            thumbstickClick.action.Disable();
-        }
-
         if (thumbstickAxis != null) thumbstickAxis.action.Disable();
+        
+        if (summonMargoAction != null)
+        {
+            summonMargoAction.action.Disable();
+            summonMargoAction.action.performed -= SummonMargo;
+        }
     }
 
     private void Start()
     {
         HideAllApps();
         ClearHighlights();
-        if (margoModel != null) margoModel.SetActive(false); // Hide Margo on boot
+        if (margoModel != null) margoModel.SetActive(false); 
+        if (appSwapMenuCanvas != null) appSwapMenuCanvas.SetActive(false);
     }
 
     private void Update()
     {
-        if (isThumbstickPressed)
+        if (thumbstickAxis == null) return;
+
+        Vector2 axis = thumbstickAxis.action.ReadValue<Vector2>();
+
+        // 1. If pushing the stick far enough, activate Dial Mode
+        if (axis.magnitude > 0.5f)
         {
-            Vector2 axisValue = thumbstickAxis.action.ReadValue<Vector2>();
-
-            // 1. RADIAL MENU HOVER
-            if (axisValue.magnitude > 0.5f)
-            {
-                DetermineRadialApp(axisValue);
-                appSwitchedDuringPress = true; 
-            }
-            else
-            {
-                // Clear highlights if resting in the middle
-                ClearHighlights();
-
-                // 2. MARGO SUMMON TIMER (If holding still)
-                if (!appSwitchedDuringPress && !margoSummonedThisPress)
-                {
-                    pressTimer += Time.deltaTime;
-                    
-                    // Reduced to 0.3s so it feels much more responsive!
-                    if (pressTimer >= 0.3f)
-                    {
-                        SummonMargo();
-                        margoSummonedThisPress = true;
-                    }
-                }
-            }
+            isDialActive = true;
+            DetermineRadialApp(axis);
+        }
+        // 2. If letting go of the stick (returning to center), lock it in!
+        else if (isDialActive && axis.magnitude < 0.2f)
+        {
+            isDialActive = false;
+            ClearHighlights();
+            // Notice we DO NOT hide the app here! It stays securely open.
         }
     }
 
-    private void OnThumbstickPress(InputAction.CallbackContext context)
+    private void SummonMargo(InputAction.CallbackContext context)
     {
-        isThumbstickPressed = true;
-        appSwitchedDuringPress = false;
-        margoSummonedThisPress = false;
-        pressTimer = 0f;
-    }
-
-    private void OnThumbstickRelease(InputAction.CallbackContext context)
-    {
-        isThumbstickPressed = false;
-        ClearHighlights(); // Turn off the hover visuals when you let go
-    }
-
-    private void SummonMargo()
-    {
-        Debug.Log("[AppStateManager] Margo Materialized!");
+        isMenuOpen = !isMenuOpen; // Toggle the state
+        Debug.Log($"[AppStateManager] Options Button Pressed! System Menu is now {(isMenuOpen ? "OPEN" : "CLOSED")}.");
         
+        // 1. Toggle Margo
         if (margoModel != null && Camera.main != null)
         {
-            // Turn her on
-            margoModel.SetActive(true);
+            margoModel.SetActive(isMenuOpen);
             
-            // Calculate a spot 1.5 meters exactly in front of the VR headset
-            Transform cam = Camera.main.transform;
-            Vector3 spawnPos = cam.position + (cam.forward * 1.5f);
-            spawnPos.y = cam.position.y - 0.4f; // Drop her slightly so she isn't floating at eye level
-            
-            margoModel.transform.position = spawnPos;
+            if (isMenuOpen)
+            {
+                Transform cam = Camera.main.transform;
+                Vector3 spawnPos = cam.position + (cam.forward * 1.5f);
+                spawnPos.y = cam.position.y - 0.4f; 
+                
+                margoModel.transform.position = spawnPos;
 
-            // Make her look at you
-            Vector3 lookPos = cam.position;
-            lookPos.y = margoModel.transform.position.y; // Keep her standing straight
-            margoModel.transform.LookAt(lookPos);
+                Vector3 lookPos = cam.position;
+                lookPos.y = margoModel.transform.position.y; 
+                margoModel.transform.LookAt(lookPos);
+            }
         }
 
-        // Trigger the AI voice listener
-        OnMargoActivated?.Invoke();
+        // 2. Toggle the App Swap Menu
+        if (appSwapMenuCanvas != null)
+        {
+            appSwapMenuCanvas.SetActive(isMenuOpen);
+            
+            // Note: If your App Swap Menu is a World Space canvas, you might want to position 
+            // it right next to Margo here. If it's attached to your wrist or camera, 
+            // simply turning it on is enough!
+        }
+
+        if (isMenuOpen)
+        {
+            OnMargoActivated?.Invoke();
+        }
     }
 
     private void DetermineRadialApp(Vector2 axis)
     {
-        HideAllApps();
-        ClearHighlights();
-
-        // 1. Calculate angle from -180 to 180 degrees
+        // Calculate angle from 0 to 360 degrees
         float angle = Mathf.Atan2(axis.y, axis.x) * Mathf.Rad2Deg;
-        
-        // 2. Normalize angle to 0-360 for easier division
         if (angle < 0) angle += 360f;
 
-        // 3. Divide 360 degrees into 8 slices of 45 degrees each.
-        // Adding 22.5 to the offset ensures the slices are perfectly centered on the joystick axes.
+        // Divide into 8 slices
         int slice = Mathf.RoundToInt(angle / 45f) % 8;
+
+        GameObject targetApp = null;
+        GameObject targetHighlight = null;
 
         switch (slice)
         {
-            case 0: // RIGHT
-                if (highlightRight != null) highlightRight.SetActive(true);
-                SwitchApp(appRight);
-                break;
-            case 1: // UP-RIGHT (Right Forward)
-                if (highlightRightForward != null) highlightRightForward.SetActive(true);
-                SwitchApp(appRightForward);
-                break;
-            case 2: // UP (Forward)
-                if (highlightForward != null) highlightForward.SetActive(true);
-                SwitchApp(appForward);
-                break;
-            case 3: // UP-LEFT (Left Forward)
-                if (highlightLeftForward != null) highlightLeftForward.SetActive(true);
-                SwitchApp(appLeftForward);
-                break;
-            case 4: // LEFT
-                if (highlightLeft != null) highlightLeft.SetActive(true);
-                SwitchApp(appLeft);
-                break;
-            case 5: // DOWN-LEFT (Left Back)
-                if (highlightLeftBack != null) highlightLeftBack.SetActive(true);
-                SwitchApp(appLeftBack);
-                break;
-            case 6: // DOWN (Back)
-                if (highlightBack != null) highlightBack.SetActive(true);
-                SwitchApp(appBack);
-                break;
-            case 7: // DOWN-RIGHT (Right Back)
-                if (highlightRightBack != null) highlightRightBack.SetActive(true);
-                SwitchApp(appRightBack);
-                break;
+            case 0: targetHighlight = highlightRight; targetApp = appRight; break;
+            case 1: targetHighlight = highlightRightForward; targetApp = appRightForward; break;
+            case 2: targetHighlight = highlightForward; targetApp = appForward; break;
+            case 3: targetHighlight = highlightLeftForward; targetApp = appLeftForward; break;
+            case 4: targetHighlight = highlightLeft; targetApp = appLeft; break;
+            case 5: targetHighlight = highlightLeftBack; targetApp = appLeftBack; break;
+            case 6: targetHighlight = highlightBack; targetApp = appBack; break;
+            case 7: targetHighlight = highlightRightBack; targetApp = appRightBack; break;
+        }
+
+        // Show the UI highlight so the player knows what they are hovering over
+        ClearHighlights();
+        if (targetHighlight != null) targetHighlight.SetActive(true);
+
+        // Preview the app instantly if one is slotted there
+        if (targetApp != null && targetApp != currentActiveApp)
+        {
+            SwitchApp(targetApp);
         }
     }
 
     private void SwitchApp(GameObject appCanvas)
     {
         if (appCanvas == null) return;
+        HideAllApps();
         currentActiveApp = appCanvas;
         currentActiveApp.SetActive(true);
+    }
+
+    // NEW: This is the missing method that Node-RED / MQTT uses to open apps via voice!
+    public void SwitchApp(string appName)
+    {
+        appName = appName.ToLower();
+        GameObject foundApp = null;
+
+        if (appForward != null && appForward.name.ToLower() == appName) foundApp = appForward;
+        else if (appRightForward != null && appRightForward.name.ToLower() == appName) foundApp = appRightForward;
+        else if (appRight != null && appRight.name.ToLower() == appName) foundApp = appRight;
+        else if (appRightBack != null && appRightBack.name.ToLower() == appName) foundApp = appRightBack;
+        else if (appBack != null && appBack.name.ToLower() == appName) foundApp = appBack;
+        else if (appLeftBack != null && appLeftBack.name.ToLower() == appName) foundApp = appLeftBack;
+        else if (appLeft != null && appLeft.name.ToLower() == appName) foundApp = appLeft;
+        else if (appLeftForward != null && appLeftForward.name.ToLower() == appName) foundApp = appLeftForward;
+
+        if (foundApp != null)
+        {
+            Debug.Log($"[AppStateManager] Opening {foundApp.name} via MQTT command");
+            SwitchApp(foundApp);
+        }
+        else
+        {
+            Debug.LogWarning($"[AppStateManager] MQTT tried to open app '{appName}', but it wasn't found in the 8 slots!");
+        }
     }
 
     private void HideAllApps()

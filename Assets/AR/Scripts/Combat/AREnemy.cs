@@ -57,9 +57,12 @@ public class AREnemy : MonoBehaviour, IDamageable
         
         UpdateHealthUI();
 
-        // Physics Settings for Skeletons
-        rb.isKinematic = true; 
-        rb.useGravity = false;
+        // PHYSICS UPDATE: Enable Gravity and Solid Collisions!
+        rb.isKinematic = false; 
+        rb.useGravity = true;
+        
+        // Prevent the skeleton from tipping over and falling on its face
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         
         currentState = State.Wandering;
         PickNewWanderTarget();
@@ -144,13 +147,19 @@ public class AREnemy : MonoBehaviour, IDamageable
         {
             Quaternion targetRot = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 5f);
-            transform.position += direction * speed * Time.deltaTime;
+            
+            // PHYSICS UPDATE: Use velocity instead of teleporting. 
+            // This stops the Familiar from walking over them and lets gravity pull them down!
+            Vector3 moveVelocity = direction * speed;
+            moveVelocity.y = rb.linearVelocity.y; // Keep the falling/gravity intact
+            rb.linearVelocity = moveVelocity;
             
             // Pass the current speed to the Animator so it knows whether to Walk or Run!
             anim.SetFloat("MoveSpeed", speed);
         }
         else
         {
+            rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
             anim.SetFloat("MoveSpeed", 0f);
         }
     }
@@ -183,7 +192,8 @@ public class AREnemy : MonoBehaviour, IDamageable
 
     private void ExecuteAttack()
     {
-        // Stop moving
+        // Stop moving abruptly when attacking
+        rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
         anim.SetFloat("MoveSpeed", 0f);
         anim.SetTrigger("Attack");
         lastAttackTime = Time.time;
@@ -237,6 +247,7 @@ public class AREnemy : MonoBehaviour, IDamageable
     private void Die()
     {
         currentState = State.Dead;
+        rb.linearVelocity = Vector3.zero;
         anim.SetFloat("MoveSpeed", 0f);
         anim.SetTrigger("Die");
         

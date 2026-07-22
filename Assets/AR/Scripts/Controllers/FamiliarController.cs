@@ -12,8 +12,6 @@ public class FamiliarController : MonoBehaviour, IDamageable
     public float currentMana { get; private set; }
     public float currentStamina { get; private set; }
     public bool isExhausted { get; private set; }
-    
-    // NEW: Shield State
     public bool isDefending { get; private set; }
 
     [Header("Regeneration Rates")]
@@ -37,15 +35,17 @@ public class FamiliarController : MonoBehaviour, IDamageable
     private int comboStep = 0;
     private float lastAttackTime = 0f;
     private Coroutine currentSwingCoroutine;
-
     private Animator anim;
 
     void Start()
     {
         anim = GetComponent<Animator>();
         currentHealth = maxHealth;
-        currentMana = maxMana;
         currentStamina = maxStamina;
+        
+        // NEW: Start with 0 Mana so the player has to earn their ultimate!
+        currentMana = 0f; 
+
         isExhausted = false;
         isDefending = false;
 
@@ -82,7 +82,6 @@ public class FamiliarController : MonoBehaviour, IDamageable
         }
     }
 
-    // NEW: Called constantly by FamiliarAI while the B button is held
     public void SetDefending(bool defending)
     {
         if (isExhausted) defending = false; // Can't block if tired
@@ -98,7 +97,6 @@ public class FamiliarController : MonoBehaviour, IDamageable
     {
         if (Time.time < lastHitTime + invincibilityTime) return;
         
-        // If holding B button (Shield up)
         if (isDefending)
         {
             BlockAttack(damage);
@@ -128,19 +126,15 @@ public class FamiliarController : MonoBehaviour, IDamageable
     {
         lastHitTime = Time.time;
 
-        // Blocking drains 15 stamina instead of taking health damage
         if (TryUseStamina(15f))
         {
             Debug.Log("Shield Blocked the Attack!");
             ShowDamagePopup(0f); 
-            
-            // Optional: Play a "Blocked" flinch animation here if you have one
-            // if (anim != null) anim.SetTrigger("BlockHit"); 
         }
         else
         {
             Debug.Log("Guard Break!");
-            isDefending = false; // Force shield down
+            isDefending = false; 
             TakeDamage(damage); 
         }
     }
@@ -220,7 +214,6 @@ public class FamiliarController : MonoBehaviour, IDamageable
         currentStamina += amount;
         currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
         
-        // Clear exhaustion if stamina recovers past the 5% threshold
         if (isExhausted && currentStamina >= (maxStamina * 0.05f))
         {
             isExhausted = false;
@@ -252,8 +245,6 @@ public class FamiliarController : MonoBehaviour, IDamageable
         {
             Vector3 jitterOffset = new Vector3(Random.Range(-0.3f, 0.3f), Random.Range(-0.1f, 0.1f), Random.Range(-0.3f, 0.3f));
             GameObject popup = Instantiate(floatingDamageTextPrefab, damageTextSpawnPoint.position + jitterOffset, Quaternion.identity);
-            
-            // Assume you have a script named FloatingDamageText on the prefab
             popup.SendMessage("Setup", damage, SendMessageOptions.DontRequireReceiver); 
         }
     }

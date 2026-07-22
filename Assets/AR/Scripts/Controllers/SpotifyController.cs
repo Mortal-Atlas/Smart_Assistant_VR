@@ -22,9 +22,9 @@ public class SpotifyController : MonoBehaviour
     [Tooltip("Use a RawImage for web textures, it's easier than converting to Sprites")]
     public RawImage albumArtImage; 
     
-    [Tooltip("Optional: Objects to swap out based on playback state")]
-    public GameObject playButtonIcon;
-    public GameObject pauseButtonIcon;
+    [Header("Panel Link")]
+    [Tooltip("Drag the GameObject holding your SpotifyPanelController here so MQTT can sync the play/pause icon!")]
+    public SpotifyPanelController panelController;
 
     private string currentArtUrl = "";
 
@@ -36,6 +36,7 @@ public class SpotifyController : MonoBehaviour
 
     private void OnDisable()
     {
+        // Clean up the event listener when the panel is closed
         MqttQuestBridge.OnSpotifyStateUpdated -= UpdateState;
     }
 
@@ -49,9 +50,11 @@ public class SpotifyController : MonoBehaviour
             if (trackNameText != null) trackNameText.text = state.track_name;
             if (artistNameText != null) artistNameText.text = state.artist_name;
 
-            // Toggle Play/Pause icons so the UI reflects reality
-            if (playButtonIcon != null) playButtonIcon.SetActive(!state.is_playing);
-            if (pauseButtonIcon != null) pauseButtonIcon.SetActive(state.is_playing);
+            // NEW: Tell the 3D Poke Button to update its picture based on what Node-RED says!
+            if (panelController != null)
+            {
+                panelController.ForceSyncUIState(state.is_playing);
+            }
 
             // Only fetch new album art if the song (and URL) actually changed
             if (albumArtImage != null && state.album_art_url != currentArtUrl && !string.IsNullOrEmpty(state.album_art_url))
