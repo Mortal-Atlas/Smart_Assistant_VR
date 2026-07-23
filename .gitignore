@@ -109,3 +109,9 @@ InitTestScene*.unity*
 Assets/Resources/CredentialStorage.asset
 
 Assets/Resources/CredentialStorage.asset.meta
+
+vscode/
+*.code-workspace
+
+Assets/Resources/elevenlabs_key.txt
+Assets/Resources/elevenlabs_key.txt.meta
