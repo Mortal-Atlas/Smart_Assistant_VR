@@ -2,6 +2,8 @@ using UnityEngine;
 using M2MqttUnity;
 using uPLibrary.Networking.M2Mqtt.Messages;
 using UnityEngine.InputSystem;
+using UnityEngine.Events; // Required for UnityEvent
+
 
 [System.Serializable]
 public class RikaCommand
@@ -33,6 +35,10 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     [Tooltip("Drag the GameObject with the GeminiManager script here")]
     public GameObject geminiManager;
+
+    [Header("TTS Output")]
+    [Tooltip("Drag your Meta TTS Building Block here and select Speak(string) to make Margo talk.")]
+    public UnityEvent<string> OnAIResponseReceived; 
 
     [Header("Controls")]
     [Tooltip("Input Action for Right Thumbstick Click (Press)")]
@@ -173,97 +179,68 @@ public class MqttQuestBridge : M2MqttUnityClient
         base.OnApplicationQuit();
     }
 
-    protected override void DecodeMessage(string topic, byte[] message)
-    {
-        string msg = System.Text.Encoding.UTF8.GetString(message);
-        
-        if (topic == "vr/status/ping")
-        {
-            if (OVRPlugin.userPresent)
-            {
-                PublishMessage(MargoTopics.VRStatus, "online", false);
-            }
-        }
-        else if (topic == MargoTopics.Commands)
-        {
-            try
-            {
-                RikaCommand data = JsonUtility.FromJson<RikaCommand>(msg);
-                if (data != null && data.command == "materialize") 
-                {
-                    if (rikaAgent != null) rikaAgent.SendMessage("Materialize", SendMessageOptions.DontRequireReceiver);
-                }
-                else if (data != null && data.command == "poof") 
-                {
-                    if (rikaAgent != null) rikaAgent.SendMessage("PoofAway", SendMessageOptions.DontRequireReceiver);
-                }
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("Failed to parse the JSON command. Error: " + e.Message);
-            }
-        } 
-        else if (topic == MargoTopics.VoiceInput)
-        {
-            if (chatController != null) chatController.SendMessage("OnMqttMessageReceived", "\n\nUser: " + msg, SendMessageOptions.DontRequireReceiver);
-            OnVoiceInputReceived?.Invoke(msg);
-        }
-        else if (topic == MargoTopics.AIResponse)
-        {
-            if (chatController != null) chatController.SendMessage("OnMqttMessageReceived", "\n\nMargo: " + msg, SendMessageOptions.DontRequireReceiver);
-        }
-        else if (topic == MargoTopics.AppSwitch)
-        {
-            if (appStateManager != null) appStateManager.SendMessage("SwitchApp", msg, SendMessageOptions.DontRequireReceiver);
-            OnAppSwitched?.Invoke(msg);
-        }
-        else if (topic == MargoTopics.VisionResult)
-        {
-            if (geminiManager != null) geminiManager.SendMessage("UpdateScanResult", msg, SendMessageOptions.DontRequireReceiver);
-        }
-        else if (topic == MargoTopics.SpotifyState)
-        {
-            OnSpotifyStateUpdated?.Invoke(msg);
-        }
-        else if (topic == MargoTopics.PhoneTouch)
-        {
-            OnTouchDataReceived?.Invoke(msg);
-        }
-        else if (topic == MargoTopics.PetState)
-        {
-            OnPetStateReceived?.Invoke(msg);
-        }
-        else if (topic == MargoTopics.FishingCast)
-        {
-            try
-            {
-                Vector2 velocity = JsonUtility.FromJson<Vector2>(msg);
-                OnFishingCastReceived?.Invoke(velocity);
-            }
-            catch (System.Exception e)
-            {
-                Debug.LogError("Failed to parse Fishing Cast JSON: " + e.Message);
-            }
-        }
-        else if (topic == MargoTopics.CombatInput)
-        {
-            OnCombatInputReceived?.Invoke(msg);
-        }
-        else if (topic == MargoTopics.PetAction)
-        {
-            OnPetActionReceived?.Invoke(msg);
-        }
-    }
-
-    public void PublishMessage(string topic, string payload, bool retain = false)
+    public void PublishMessage(string topic, string message, bool retain = false)
     {
         if (client != null && client.IsConnected)
         {
-            client.Publish(topic, System.Text.Encoding.UTF8.GetBytes(payload), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, retain);
+            client.Publish(topic, System.Text.Encoding.UTF8.GetBytes(message), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, retain);
         }
         else
         {
             Debug.LogWarning($"[MQTT] Cannot publish to {topic}. Broker is disconnected.");
+        }
+    }
+
+    protected override void DecodeMessage(string topic, byte[] message)
+    {
+        string payload = System.Text.Encoding.UTF8.GetString(message);
+
+        // --- CORE AI TEXT ---
+        if (topic == MargoTopics.AIResponse)
+        {
+            Debug.Log($"[MQTT] Received AI Response: {payload}");
+
+            // 1. Send it to the UI panel
+            if (chatController != null)
+            {
+                chatController.SendMessage("OnMqttMessageReceived", payload, SendMessageOptions.DontRequireReceiver);
+            }
+
+            // 2. Invoke the UnityEvent for the Meta TTS Block on the Main Thread
+            UnityMainThreadDispatcher.Instance().Enqueue(() =>
+            {
+                OnAIResponseReceived?.Invoke(payload);
+            });
+        }
+        
+        // --- MODULE ROUTING ---
+        else if (topic == MargoTopics.SpotifyState)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnSpotifyStateUpdated?.Invoke(payload); });
+        }
+        else if (topic == MargoTopics.PhoneTouch)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnTouchDataReceived?.Invoke(payload); });
+        }
+        else if (topic == MargoTopics.VoiceInput)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnVoiceInputReceived?.Invoke(payload); });
+        }
+        else if (topic == MargoTopics.PetState)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnPetStateReceived?.Invoke(payload); });
+        }
+        else if (topic == MargoTopics.AppSwitch)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnAppSwitched?.Invoke(payload); });
+        }
+        else if (topic == MargoTopics.CombatInput)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnCombatInputReceived?.Invoke(payload); });
+        }
+        else if (topic == MargoTopics.PetAction)
+        {
+            UnityMainThreadDispatcher.Instance().Enqueue(() => { OnPetActionReceived?.Invoke(payload); });
         }
     }
 }

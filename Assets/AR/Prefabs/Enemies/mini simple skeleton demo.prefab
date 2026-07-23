@@ -1245,13 +1245,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyName: Bonez
   level: 1
-  maxHealth: 300
+  maxHealth: 150
   healthBarFill: {fileID: 2309467447528746234}
   nameText: {fileID: 5012398918249391703}
   levelText: {fileID: 8339298023924199277}
   walkSpeed: 0.2
-  runSpeed: 0.2
-  aggroRadius: 4
+  runSpeed: 0.5
+  aggroRadius: 10
   attackRadius: 1.5
   attackDamage: 2
   attackCooldown: 2.5
@@ -1300,10 +1300,10 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!1 &4715186546915807789
 GameObject:

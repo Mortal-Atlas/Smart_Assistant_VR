@@ -9,48 +9,43 @@ using System.Linq;
 public class FamiliarAI : MonoBehaviour
 {
     [Header("VR Input Bindings")]
-    [Tooltip("Left Stick: Movement")]
-    public InputActionReference moveAction;    
-    [Tooltip("X Button: Dash (Air Dash supported)")]
-    public InputActionReference dashAction;    
-    [Tooltip("Y Button: Jump (Double Jump supported)")]
-    public InputActionReference jumpAction;    
-    [Tooltip("A Button: Melee Attack")]
-    public InputActionReference attackAction;  
-    [Tooltip("Right Trigger: Shield Defend")]
-    public InputActionReference defendAction;  
-    [Tooltip("Left Stick Click: Cast Ultimate (Spin Attack)")]
-    public InputActionReference ultimateAction;
-    [Tooltip("B Button: Toggle Z-Targeting Lock On")]
-    public InputActionReference toggleTargetAction;
-    [Tooltip("Right Stick: Flick Left/Right to change targets")]
+    public InputActionReference moveAction;
+    public InputActionReference attackAction;
+    public InputActionReference jumpAction;
+    public InputActionReference dashAction;
+    public InputActionReference defendAction;
     public InputActionReference cycleTargetAction;
+    public InputActionReference ultimateAction;
+    public InputActionReference toggleTargetAction;
 
-    [Header("Movement Settings")]
+    [Header("Movement & Physics")]
     public float baseMoveSpeed = 3.0f;
     public float dashSpeedMultiplier = 2.5f;
     public float dashDuration = 0.3f;
     public float jumpForce = 5.0f;
-    public int maxJumps = 2; // NEW: Controls double jumping
     public float gravity = -9.81f;
-
-    [Header("Z-Targeting Settings")]
     public float rotationSpeed = 10f;
-    
+    public int maxJumps = 2;
+
+    // Component References
     private CharacterController controller;
     private Animator animator;
     private FamiliarController statsController;
     private Transform mainCamera;
 
+    // Internal State Variables
     private float verticalVelocity;
     private bool isDashing = false;
     private float dashTimer = 0f;
-    private int currentJumps = 0; // Tracks double jumps
+    private int currentJumps = 0;
 
+    // Targeting State
     private Transform currentTarget = null;
+    public Transform CurrentTarget => currentTarget;
+
     private List<AREnemy> availableTargets = new List<AREnemy>();
     private int currentTargetIndex = -1;
-    private bool isCycleFlicked = false; // Prevents the stick from rapidly cycling 60 times a second
+    private bool isCycleFlicked = false;
 
     void Awake()
     {
@@ -129,7 +124,6 @@ public class FamiliarAI : MonoBehaviour
 
     void Update()
     {
-        // FIX: Prevent error spam if MRUK hasn't placed the Familiar on the floor yet!
         if (!controller.enabled) return;
 
         // Shield logic (Right Trigger)
@@ -214,7 +208,7 @@ public class FamiliarAI : MonoBehaviour
         if (controller.isGrounded)
         {
             if (verticalVelocity < 0) verticalVelocity = -2f; 
-            currentJumps = 0; // Reset double jump when we touch the floor
+            currentJumps = 0; 
         }
         else
         {
@@ -252,7 +246,6 @@ public class FamiliarAI : MonoBehaviour
     {
         if (!controller.enabled) return;
 
-        // Allowed to jump if we haven't hit the max limit (Double Jump)
         if (currentJumps < maxJumps)
         {
             verticalVelocity = jumpForce;
@@ -265,7 +258,6 @@ public class FamiliarAI : MonoBehaviour
     {
         if (!controller.enabled) return;
 
-        // REMOVED controller.isGrounded so we can Air Dash!
         if (!isDashing)
         {
             if (statsController != null && statsController.TryUseStamina(20f))
@@ -300,17 +292,15 @@ public class FamiliarAI : MonoBehaviour
 
         Vector2 cycleInput = cycleTargetAction.action.ReadValue<Vector2>();
 
-        // If pushing stick far enough left or right
         if (Mathf.Abs(cycleInput.x) > 0.5f)
         {
             if (!isCycleFlicked)
             {
-                isCycleFlicked = true; // Lock it until they let go
+                isCycleFlicked = true; 
                 if (cycleInput.x > 0) CycleTargetRight();
                 else CycleTargetLeft();
             }
         }
-        // When they let go of the stick, reset the flick lock
         else if (Mathf.Abs(cycleInput.x) < 0.2f)
         {
             isCycleFlicked = false;

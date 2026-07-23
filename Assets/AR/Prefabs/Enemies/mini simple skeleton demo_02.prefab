@@ -2175,10 +2175,10 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!136 &4571854071781165089
 CapsuleCollider:
@@ -2217,16 +2217,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyName: HUSK
   level: 1
-  maxHealth: 1000
+  maxHealth: 300
   healthBarFill: {fileID: 3641483975767140670}
   nameText: {fileID: 7722270150079337337}
   levelText: {fileID: 228418059913239756}
   walkSpeed: 0.2
-  runSpeed: 0.2
-  aggroRadius: 4
+  runSpeed: 0.5
+  aggroRadius: 10
   attackRadius: 1.5
   attackDamage: 2
   attackCooldown: 2.5
+  knockbackForce: 5
+  knockbackDuration: 0.2
 --- !u!1 &9202933182541592213
 GameObject:
   m_ObjectHideFlags: 0

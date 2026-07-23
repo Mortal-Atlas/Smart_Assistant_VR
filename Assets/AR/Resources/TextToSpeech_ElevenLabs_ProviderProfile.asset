@@ -16,7 +16,7 @@ MonoBehaviour:
   apiKey: f7ec2d68874a37d79d1bd1f19482ee0cc744f8343eb39024f86a4d8d88dea242
   overrideApiKey: 0
   endpoint: https://api.elevenlabs.io
-  model: eleven_turbo_v2_5
-  voiceId: 6fZce9LFNG3iEITDfqZZ
+  model: eleven_flash_v2_5
+  voiceId: zmcVlqmyk3Jpn5AVYcAL
   sttLanguage: 
   sttIncludeAudioEvents: 0

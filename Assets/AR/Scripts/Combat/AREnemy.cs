@@ -1,8 +1,8 @@
 using UnityEngine;
 using System.Collections;
 using Meta.XR.MRUtilityKit;
-using UnityEngine.UI; // NEW: Needed for the Health Bar Image
-using TMPro;          // NEW: Needed for the Name/Level Text
+using UnityEngine.UI; 
+using TMPro;          
 
 [RequireComponent(typeof(Rigidbody))]
 [RequireComponent(typeof(Animator))]
@@ -16,9 +16,9 @@ public class AREnemy : MonoBehaviour, IDamageable
     private float currentHealth;
 
     [Header("Enemy UI")]
-    public Image healthBarFill;  // Drag the Red Fill Image here
-    public TMP_Text nameText;    // Drag the Name Text object here
-    public TMP_Text levelText;   // NEW: Drag the Level Text object here
+    public Image healthBarFill;  
+    public TMP_Text nameText;    
+    public TMP_Text levelText;   
 
     [Header("Movement & Combat")]
     public float walkSpeed = 1.0f;
@@ -27,6 +27,12 @@ public class AREnemy : MonoBehaviour, IDamageable
     public float attackRadius = 1.5f;
     public float attackDamage = 15f;
     public float attackCooldown = 2.5f;
+    
+    [Header("Combat Feel")]
+    [Tooltip("How hard the enemy is pushed back when hit.")]
+    public float knockbackForce = 5f;
+    [Tooltip("How long the AI pauses to allow the physics to push it.")]
+    public float knockbackDuration = 0.2f;
 
     private Transform target;
     private Animator anim;
@@ -38,6 +44,7 @@ public class AREnemy : MonoBehaviour, IDamageable
     private Vector3 wanderTarget;
     private float wanderTimer;
     private float lastAttackTime;
+    private float knockbackTimer = 0f;
 
     void Start()
     {
@@ -72,6 +79,13 @@ public class AREnemy : MonoBehaviour, IDamageable
     {
         if (currentState == State.Dead) return;
 
+        // Pause the AI logic briefly if we are getting knocked back
+        if (knockbackTimer > 0)
+        {
+            knockbackTimer -= Time.deltaTime;
+            return; 
+        }
+
         FindFamiliarTarget();
 
         switch (currentState)
@@ -96,7 +110,6 @@ public class AREnemy : MonoBehaviour, IDamageable
     {
         if (target == null)
         {
-            // Unity 6 standard - Replaces FindObjectOfType
             FamiliarController familiar = Object.FindFirstObjectByType<FamiliarController>();
             if (familiar != null) target = familiar.transform;
         }
@@ -148,13 +161,10 @@ public class AREnemy : MonoBehaviour, IDamageable
             Quaternion targetRot = Quaternion.LookRotation(direction);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 5f);
             
-            // PHYSICS UPDATE: Use velocity instead of teleporting. 
-            // This stops the Familiar from walking over them and lets gravity pull them down!
             Vector3 moveVelocity = direction * speed;
-            moveVelocity.y = rb.linearVelocity.y; // Keep the falling/gravity intact
+            moveVelocity.y = rb.linearVelocity.y; 
             rb.linearVelocity = moveVelocity;
             
-            // Pass the current speed to the Animator so it knows whether to Walk or Run!
             anim.SetFloat("MoveSpeed", speed);
         }
         else
@@ -168,7 +178,6 @@ public class AREnemy : MonoBehaviour, IDamageable
     {
         if (MRUK.Instance != null && MRUK.Instance.GetCurrentRoom() != null)
         {
-            // The exact 5 arguments required by the new Meta MRUK update
             bool foundSpot = MRUK.Instance.GetCurrentRoom().GenerateRandomPositionOnSurface(
                 MRUK.SurfaceType.FACING_UP,
                 0.1f,
@@ -185,14 +194,12 @@ public class AREnemy : MonoBehaviour, IDamageable
             }
         }
 
-        // Fallback if MRUK is not loaded or fails
         wanderTarget = transform.position + new Vector3(Random.Range(-2f, 2f), 0, Random.Range(-2f, 2f));
         wanderTimer = 3f;
     }
 
     private void ExecuteAttack()
     {
-        // Stop moving abruptly when attacking
         rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
         anim.SetFloat("MoveSpeed", 0f);
         anim.SetTrigger("Attack");
@@ -203,45 +210,60 @@ public class AREnemy : MonoBehaviour, IDamageable
 
     private IEnumerator DamageSphereRoutine()
     {
-        // Wait 0.5s for the skeleton's physical swing to reach the player
         yield return new WaitForSeconds(0.5f); 
 
         Collider[] hits = Physics.OverlapSphere(transform.position + transform.forward * 1.0f, 1.0f);
         foreach (var hit in hits)
         {
-            if (hit.transform.root == transform.root) continue; // Don't hit ourselves
+            if (hit.transform.root == transform.root) continue; 
 
-            // 1. Check for a shield block FIRST!
             ShieldBlocker shield = hit.GetComponent<ShieldBlocker>();
             if (shield != null)
             {
                 shield.TakeDamage(attackDamage);
-                yield break; // Stop checking after a block
+                yield break; 
             }
 
-            // 2. If no shield, check for the body
             IDamageable damageable = hit.GetComponentInParent<IDamageable>();
             if (damageable != null)
             {
                 damageable.TakeDamage(attackDamage);
-                yield break; // Stop checking after hitting the body
+                yield break; 
             }
         }
     }
 
+    // Automatically triggers knockback away from the target/attacker when damage is received!
     public void TakeDamage(float amount)
     {
         if (currentState == State.Dead) return;
 
         currentHealth -= amount;
-        UpdateHealthUI(); // NEW: Shrink the health bar when hit!
+        UpdateHealthUI(); 
         
         anim.SetTrigger("Hit");
+
+        // Automatically determine knockback source from the current target or face direction
+        Vector3 hitSource = target != null ? target.position : transform.position - transform.forward;
+        ApplyKnockback(hitSource);
 
         if (currentHealth <= 0)
         {
             Die();
         }
+    }
+
+    public void ApplyKnockback(Vector3 hitSourcePosition)
+    {
+        if (currentState == State.Dead) return;
+
+        knockbackTimer = knockbackDuration; 
+
+        Vector3 knockbackDirection = (transform.position - hitSourcePosition).normalized;
+        knockbackDirection.y = 0; 
+
+        rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
+        rb.AddForce(knockbackDirection * knockbackForce, ForceMode.Impulse);
     }
 
     private void Die()
@@ -251,14 +273,12 @@ public class AREnemy : MonoBehaviour, IDamageable
         anim.SetFloat("MoveSpeed", 0f);
         anim.SetTrigger("Die");
         
-        // Disable physics so the dead body doesn't block the player
         rb.isKinematic = true;
         GetComponent<CapsuleCollider>().enabled = false;
         
         Destroy(gameObject, 3f); 
     }
 
-    // NEW: Helper method to update the visual bar
     private void UpdateHealthUI()
     {
         if (healthBarFill != null)
