@@ -81,6 +81,10 @@ public class WeatherWidgetReceiver : MonoBehaviour
 
     void OnMessageReceived(object sender, MqttMsgPublishEventArgs e)
     {
+        // CRITICAL FIX: Since the MQTT Client shares events, this script hears EVERY topic.
+        // If the topic doesn't match our specific weather topic, ignore it immediately!
+        if (e.Topic != topic) return;
+
         string json = Encoding.UTF8.GetString(e.Message);
         
         Debug.Log("Rika says: I got a message! Here is the JSON: " + json);

@@ -12,11 +12,11 @@ public class SpotifyController : MonoBehaviour
     [SerializeField] private TMP_Text artistText;
     [SerializeField] private RawImage albumCoverImage;
     [SerializeField] private Slider progressSlider;
-    [SerializeField] private TMP_Text timeText;
+    [SerializeField] private TMP_Text timeText; // Optional: e.g. "1:24 / 3:45"
 
     [Header("MQTT Bridge Reference")]
+    [Tooltip("Drag your MqttQuestBridge GameObject here")]
     [SerializeField] private MqttQuestBridge mqttBridge;
-    [SerializeField] private string controlTopic = "rika/spotify/control";
 
     [Header("Playback State")]
     private float currentProgressMs = 0f;
@@ -37,10 +37,12 @@ public class SpotifyController : MonoBehaviour
 
     private void Update()
     {
+        // Smooth local progression if playing
         if (isPlaying && totalDurationMs > 0)
         {
             currentProgressMs += Time.deltaTime * 1000f;
             currentProgressMs = Mathf.Clamp(currentProgressMs, 0f, totalDurationMs);
+            
             UpdateProgressUI();
         }
     }
@@ -52,14 +54,17 @@ public class SpotifyController : MonoBehaviour
             SpotifyTrackData data = JsonUtility.FromJson<SpotifyTrackData>(jsonPayload);
             if (data == null) return;
 
+            // 1. Update Title & Artist
             if (titleText != null) titleText.text = string.IsNullOrEmpty(data.title) ? "Not Playing" : data.title;
             if (artistText != null) artistText.text = string.IsNullOrEmpty(data.artist) ? "Unknown Artist" : data.artist;
 
+            // 2. Update Progress Values
             currentProgressMs = data.progress_ms;
             totalDurationMs = Mathf.Max(1, data.duration_ms);
             isPlaying = data.is_playing;
             UpdateProgressUI();
 
+            // 3. Fetch Album Art if changed
             if (!string.IsNullOrEmpty(data.album_art_url) && data.album_art_url != currentAlbumUrl)
             {
                 currentAlbumUrl = data.album_art_url;
@@ -72,34 +77,23 @@ public class SpotifyController : MonoBehaviour
         }
     }
 
-    // --- POKE BUTTON CALLBACK METHODS ---
-
+    
+    // Wire this to your Play/Pause Poke Button
     public void OnPlayPauseClicked()
     {
-        SendControlCommand("play_pause");
+        if (mqttBridge != null) mqttBridge.PublishSpotifyCommand("play_pause");
     }
 
+    // Wire this to your Next Poke Button
     public void OnNextClicked()
     {
-        SendControlCommand("next");
+        if (mqttBridge != null) mqttBridge.PublishSpotifyCommand("next");
     }
 
+    // Wire this to your Previous/Rewind Poke Button
     public void OnPreviousClicked()
     {
-        SendControlCommand("previous");
-    }
-
-    private void SendControlCommand(string command)
-    {
-        if (mqttBridge != null)
-        {
-            // Publishes command back to the Pi / python backend
-            mqttBridge.PublishToTopic(controlTopic, command);
-        }
-        else
-        {
-            Debug.LogWarning($"[SpotifyController] MQTT Bridge reference missing! Command '{command}' not sent.");
-        }
+        if (mqttBridge != null) mqttBridge.PublishSpotifyCommand("previous");
     }
 
     private void UpdateProgressUI()
@@ -113,10 +107,16 @@ public class SpotifyController : MonoBehaviour
 
         if (timeText != null)
         {
-            TimeSpan current = TimeSpan.FromMilliseconds(currentProgressMs);
-            TimeSpan total = TimeSpan.FromMilliseconds(totalDurationMs);
-            timeText.text = $"{current:m\\:ss} / {total:m\\:ss}";
+            string currentFormatted = FormatTime(currentProgressMs);
+            string totalFormatted = FormatTime(totalDurationMs);
+            timeText.text = $"{currentFormatted} / {totalFormatted}";
         }
+    }
+
+    private string FormatTime(float timeMs)
+    {
+        TimeSpan t = TimeSpan.FromMilliseconds(timeMs);
+        return string.Format("{0:D1}:{1:D2}", t.Minutes, t.Seconds);
     }
 
     private IEnumerator DownloadAlbumArt(string url)
@@ -131,8 +131,12 @@ public class SpotifyController : MonoBehaviour
                 if (albumCoverImage != null)
                 {
                     albumCoverImage.texture = texture;
-                    albumCoverImage.color = Color.white;
+                    albumCoverImage.color = Color.white; // Ensure visibility
                 }
+            }
+            else
+            {
+                Debug.LogWarning($"[SpotifyController] Failed to download album art: {request.error}");
             }
         }
     }

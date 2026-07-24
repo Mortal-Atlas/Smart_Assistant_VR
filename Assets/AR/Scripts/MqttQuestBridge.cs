@@ -2,6 +2,8 @@ using UnityEngine;
 using M2MqttUnity;
 using uPLibrary.Networking.M2Mqtt.Messages;
 using UnityEngine.InputSystem;
+using Meta.XR.BuildingBlocks.AIBlocks; // Required for TextToSpeechAgent
+using System.Text;
 
 [System.Serializable]
 public class RikaCommand
@@ -23,6 +25,10 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     [Tooltip("Drag the GameObject with the SpotifyController script here")]
     public SpotifyController spotifyController;
+
+    [Header("Gemini / Voice Integration")]
+    [Tooltip("Drag the TextToSpeechAgent building block here")]
+    public TextToSpeechAgent ttsAgent;
 
     [Header("Controls")]
     [Tooltip("Input Action for Right Thumbstick Click (Press)")]
@@ -103,7 +109,7 @@ public class MqttQuestBridge : M2MqttUnityClient
         // Optional: Immediately tell HAOS to start listening for voice dictation
         if (client != null && client.IsConnected)
         {
-            client.Publish("rika/voice/listen", System.Text.Encoding.UTF8.GetBytes("start"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+            client.Publish("rika/voice/listen", Encoding.UTF8.GetBytes("start"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
     }
 
@@ -138,7 +144,26 @@ public class MqttQuestBridge : M2MqttUnityClient
         // Publish the state change to the MQTT broker so the UI Canvas (Phone) updates
         if (client != null && client.IsConnected)
         {
-            client.Publish("rika/app/switch", System.Text.Encoding.UTF8.GetBytes(appState), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+            client.Publish("rika/app/switch", Encoding.UTF8.GetBytes(appState), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+        }
+    }
+
+    // --- MERGED FROM GEMINI MANAGER ---
+    // Wire this to your STT Agent's "OnTranscription" event in the Inspector
+    public void OnTranscriptionReceived(string transcript)
+    {
+        Debug.Log($"<color=green>!!! RIKA MANAGER RECEIVED EVENT: {transcript} !!!</color>");
+
+        if (string.IsNullOrWhiteSpace(transcript)) return;
+        
+        if (client != null && client.IsConnected)
+        {
+            Debug.Log($"[Rika Network] Sending transcript: {transcript}");
+            PublishToTopic("rika/prompt", transcript);
+        }
+        else
+        {
+            Debug.LogError("[Rika Network] MQTT is not connected. Can't send message.");
         }
     }
 
@@ -153,7 +178,7 @@ public class MqttQuestBridge : M2MqttUnityClient
             new byte[] { MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE });
         
         // Broadcast that the VR headset is online and RETAIN the message (the 'true' flag at the end)
-        client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("online"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+        client.Publish("vr/status", Encoding.UTF8.GetBytes("online"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
         
         Debug.Log("Connected to the Rika Message Bus! Waiting for commands and responses...");
     }
@@ -163,14 +188,14 @@ public class MqttQuestBridge : M2MqttUnityClient
         // Be nice and tell the phone we're offline when closing the VR app
         if (client != null && client.IsConnected)
         {
-            client.Publish("vr/status", System.Text.Encoding.UTF8.GetBytes("offline"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+            client.Publish("vr/status", Encoding.UTF8.GetBytes("offline"), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
         }
         base.OnApplicationQuit();
     }
 
     protected override void DecodeMessage(string topic, byte[] message)
     {
-        string msg = System.Text.Encoding.UTF8.GetString(message);
+        string msg = Encoding.UTF8.GetString(message);
         Debug.Log("Raw message received on " + topic + ": " + msg);
         
         if (topic == "rika/commands")
@@ -229,6 +254,7 @@ public class MqttQuestBridge : M2MqttUnityClient
             // This is Rika's AI reply. Safely dispatch to main thread.
             UnityMainThreadDispatcher.Instance().Enqueue(() => 
             {
+                // 1. Send text to the Chat Log UI
                 if (chatController != null)
                 {
                     chatController.OnMqttMessageReceived("\n\nRika: " + msg);
@@ -236,6 +262,13 @@ public class MqttQuestBridge : M2MqttUnityClient
                 else
                 {
                     Debug.LogWarning("RikaChatController is not assigned in the Inspector on MqttQuestBridge!");
+                }
+
+                // 2. Send text to the TTS Engine (Merged from GeminiManager)
+                if (ttsAgent != null)
+                {
+                    string cleanMsg = msg.Replace("*", "");
+                    ttsAgent.SpeakText(cleanMsg);
                 }
             });
         }
@@ -277,7 +310,7 @@ public class MqttQuestBridge : M2MqttUnityClient
         if (client != null && client.IsConnected)
         {
             Debug.Log($"Sending Spotify Command: {command}");
-            client.Publish("rika/haos/spotify/toggle", System.Text.Encoding.UTF8.GetBytes(command), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
+            client.Publish("rika/haos/spotify/toggle", Encoding.UTF8.GetBytes(command), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
     }
 
@@ -286,7 +319,7 @@ public class MqttQuestBridge : M2MqttUnityClient
     {
         if (client != null && client.IsConnected)
         {
-            client.Publish(topic, System.Text.Encoding.UTF8.GetBytes(message), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, false);
+            client.Publish(topic, Encoding.UTF8.GetBytes(message), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, false);
             Debug.Log($"[MQTT] Published to {topic}: {message}");
         }
         else
