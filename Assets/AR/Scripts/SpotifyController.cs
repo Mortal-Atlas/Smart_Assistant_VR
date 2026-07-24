@@ -85,17 +85,30 @@ public class SpotifyController : MonoBehaviour
 
     public void OnPlayPauseClicked()
     {
-        if (mqttBridge != null) mqttBridge.PublishSpotifyCommand("play_pause");
+        Debug.Log("<color=yellow>[Spotify] Play/Pause button was pressed in VR!</color>");
+        if (mqttBridge != null) 
+        {
+            mqttBridge.PublishSpotifyCommand("play_pause");
+            Debug.Log("[Spotify] Command 'play_pause' sent to MQTT Bridge.");
+        }
+        else 
+        {
+            Debug.LogError("[Spotify] FATAL: MQTT Bridge is NOT assigned in the SpotifyController Inspector!");
+        }
     }
 
     public void OnNextClicked()
     {
+        Debug.Log("<color=yellow>[Spotify] Next button was pressed in VR!</color>");
         if (mqttBridge != null) mqttBridge.PublishSpotifyCommand("next");
+        else Debug.LogError("[Spotify] FATAL: MQTT Bridge is NOT assigned in the SpotifyController Inspector!");
     }
 
     public void OnPreviousClicked()
     {
+        Debug.Log("<color=yellow>[Spotify] Previous button was pressed in VR!</color>");
         if (mqttBridge != null) mqttBridge.PublishSpotifyCommand("previous");
+        else Debug.LogError("[Spotify] FATAL: MQTT Bridge is NOT assigned in the SpotifyController Inspector!");
     }
 
     private void UpdateProgressUI()
