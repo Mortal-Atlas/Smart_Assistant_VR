@@ -1,118 +1,139 @@
-using UnityEngine;
-using TMPro;
-using UnityEngine.UI;
+using System;
 using System.Collections;
+using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.Networking;
-
-[System.Serializable]
-public class SpotifyState
-{
-    public string track_name;
-    public string artist_name;
-    public string album_art_url;
-    public bool is_playing;
-}
+using TMPro;
 
 public class SpotifyController : MonoBehaviour
 {
-    [Header("Networking")]
-    [Tooltip("Reference to the main MQTT Bridge")]
-    public MqttQuestBridge mqttBridge;
+    [Header("UI References")]
+    [SerializeField] private TMP_Text titleText;
+    [SerializeField] private TMP_Text artistText;
+    [SerializeField] private RawImage albumCoverImage;
+    [SerializeField] private Slider progressSlider;
+    [SerializeField] private TMP_Text timeText;
 
-    [Header("UI Elements")]
-    public TextMeshProUGUI trackNameText;
-    public TextMeshProUGUI artistNameText;
-    
-    [Tooltip("Use a RawImage for web textures, it's easier than converting to Sprites")]
-    public RawImage albumArtImage; 
-    
-    [Tooltip("Optional: Objects to swap out based on playback state")]
-    public GameObject playButtonIcon;
-    public GameObject pauseButtonIcon;
+    [Header("MQTT Bridge Reference")]
+    [SerializeField] private MqttQuestBridge mqttBridge;
+    [SerializeField] private string controlTopic = "rika/spotify/control";
 
-    private string currentArtUrl = "";
+    [Header("Playback State")]
+    private float currentProgressMs = 0f;
+    private float totalDurationMs = 1f;
+    private bool isPlaying = false;
+    private string currentAlbumUrl = "";
 
-    // Called from MqttQuestBridge when "rika/spotify/state" receives a message
-    public void UpdateState(string jsonState)
+    [System.Serializable]
+    public class SpotifyTrackData
+    {
+        public string title;
+        public string artist;
+        public string album_art_url;
+        public int progress_ms;
+        public int duration_ms;
+        public bool is_playing;
+    }
+
+    private void Update()
+    {
+        if (isPlaying && totalDurationMs > 0)
+        {
+            currentProgressMs += Time.deltaTime * 1000f;
+            currentProgressMs = Mathf.Clamp(currentProgressMs, 0f, totalDurationMs);
+            UpdateProgressUI();
+        }
+    }
+
+    public void UpdateState(string jsonPayload)
     {
         try
         {
-            SpotifyState state = JsonUtility.FromJson<SpotifyState>(jsonState);
-            
-            if (trackNameText != null) trackNameText.text = state.track_name;
-            if (artistNameText != null) artistNameText.text = state.artist_name;
+            SpotifyTrackData data = JsonUtility.FromJson<SpotifyTrackData>(jsonPayload);
+            if (data == null) return;
 
-            // Toggle Play/Pause icons so the UI reflects reality
-            if (playButtonIcon != null) playButtonIcon.SetActive(!state.is_playing);
-            if (pauseButtonIcon != null) pauseButtonIcon.SetActive(state.is_playing);
+            if (titleText != null) titleText.text = string.IsNullOrEmpty(data.title) ? "Not Playing" : data.title;
+            if (artistText != null) artistText.text = string.IsNullOrEmpty(data.artist) ? "Unknown Artist" : data.artist;
 
-            // Only fetch new album art if the song (and URL) actually changed
-            if (albumArtImage != null && state.album_art_url != currentArtUrl && !string.IsNullOrEmpty(state.album_art_url))
+            currentProgressMs = data.progress_ms;
+            totalDurationMs = Mathf.Max(1, data.duration_ms);
+            isPlaying = data.is_playing;
+            UpdateProgressUI();
+
+            if (!string.IsNullOrEmpty(data.album_art_url) && data.album_art_url != currentAlbumUrl)
             {
-                currentArtUrl = state.album_art_url;
-                StartCoroutine(DownloadAlbumArt(currentArtUrl));
+                currentAlbumUrl = data.album_art_url;
+                StartCoroutine(DownloadAlbumArt(currentAlbumUrl));
             }
         }
-        catch (System.Exception e)
+        catch (Exception ex)
         {
-            Debug.LogError("Failed to parse Spotify State JSON: " + e.Message);
+            Debug.LogError($"[SpotifyController] Error parsing JSON: {ex.Message}");
+        }
+    }
+
+    // --- POKE BUTTON CALLBACK METHODS ---
+
+    public void OnPlayPauseClicked()
+    {
+        SendControlCommand("play_pause");
+    }
+
+    public void OnNextClicked()
+    {
+        SendControlCommand("next");
+    }
+
+    public void OnPreviousClicked()
+    {
+        SendControlCommand("previous");
+    }
+
+    private void SendControlCommand(string command)
+    {
+        if (mqttBridge != null)
+        {
+            // Publishes command back to the Pi / python backend
+            mqttBridge.PublishToTopic(controlTopic, command);
+        }
+        else
+        {
+            Debug.LogWarning($"[SpotifyController] MQTT Bridge reference missing! Command '{command}' not sent.");
+        }
+    }
+
+    private void UpdateProgressUI()
+    {
+        float ratio = Mathf.Clamp01(currentProgressMs / totalDurationMs);
+
+        if (progressSlider != null)
+        {
+            progressSlider.value = ratio;
+        }
+
+        if (timeText != null)
+        {
+            TimeSpan current = TimeSpan.FromMilliseconds(currentProgressMs);
+            TimeSpan total = TimeSpan.FromMilliseconds(totalDurationMs);
+            timeText.text = $"{current:m\\:ss} / {total:m\\:ss}";
         }
     }
 
     private IEnumerator DownloadAlbumArt(string url)
     {
-        using (UnityWebRequest uwr = UnityWebRequestTexture.GetTexture(url))
+        using (UnityWebRequest request = UnityWebRequestTexture.GetTexture(url))
         {
-            yield return uwr.SendWebRequest();
+            yield return request.SendWebRequest();
 
-            if (uwr.result == UnityWebRequest.Result.Success)
+            if (request.result == UnityWebRequest.Result.Success)
             {
-                // Extract the downloaded image as a Texture2D and apply it to the RawImage
-                Texture2D texture = DownloadHandlerTexture.GetContent(uwr);
-                albumArtImage.texture = texture;
-            }
-            else
-            {
-                Debug.LogError($"Failed to download album art from {url}: {uwr.error}");
+                Texture2D texture = DownloadHandlerTexture.GetContent(request);
+                if (albumCoverImage != null)
+                {
+                    albumCoverImage.texture = texture;
+                    albumCoverImage.color = Color.white;
+                }
             }
         }
-    }
-
-    // --- UI Button Hooks (Link these in the Unity Inspector OnClick events) ---
-
-    public void OnPlayPausePressed()
-    {
-        // HAOS spotifyplus usually accepts 'play_pause' to toggle the state
-        mqttBridge.PublishSpotifyCommand("play_pause");
-    }
-
-    public void OnNextPressed()
-    {
-        mqttBridge.PublishSpotifyCommand("next");
-    }
-
-    public void OnPreviousPressed()
-    {
-        mqttBridge.PublishSpotifyCommand("previous");
-    }
-
-    // --- Extended Commands ---
-
-    public void OnSkipForwardPressed()
-    {
-        // Send a skip forward command (e.g., +15 seconds)
-        mqttBridge.PublishSpotifyCommand("skip_forward");
-    }
-
-    public void OnRewindPressed()
-    {
-        // Send a rewind command (e.g., -15 seconds)
-        mqttBridge.PublishSpotifyCommand("rewind");
-    }
-
-    public void OnLikePressed()
-    {
-        // Send command to save track to user's Spotify library
-        mqttBridge.PublishSpotifyCommand("like");
     }
 }

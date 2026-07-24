@@ -280,4 +280,18 @@ public class MqttQuestBridge : M2MqttUnityClient
             client.Publish("rika/haos/spotify/toggle", System.Text.Encoding.UTF8.GetBytes(command), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
         }
     }
+
+    // A generic publish method so other controllers (like SpotifyController) can easily publish payload data
+    public void PublishToTopic(string topic, string message)
+    {
+        if (client != null && client.IsConnected)
+        {
+            client.Publish(topic, System.Text.Encoding.UTF8.GetBytes(message), MqttMsgBase.QOS_LEVEL_AT_LEAST_ONCE, false);
+            Debug.Log($"[MQTT] Published to {topic}: {message}");
+        }
+        else
+        {
+            Debug.LogWarning("[MQTT] Cannot publish, client is not connected.");
+        }
+    }
 }
