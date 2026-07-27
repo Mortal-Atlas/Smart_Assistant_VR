@@ -4,6 +4,7 @@ using uPLibrary.Networking.M2Mqtt.Messages;
 using UnityEngine.InputSystem;
 using System.Text;
 using System.Collections;
+using Meta.XR.BuildingBlocks.AIBlocks; // Keeping this for TextToSpeechAgent
 
 [System.Serializable]
 public class RikaCommand
@@ -16,11 +17,16 @@ public class MqttQuestBridge : M2MqttUnityClient
     [Header("Rika Integration")]
     public RikaAgent rikaAgent; 
     public RikaChatController chatController;
+    
+    [Tooltip("Drag your CenterEyeAnchor (Player Head) here so Rika knows where you are!")]
+    public Transform playerHead; // <--- NEW: Tells her where to fly to!
+
+    [Header("App & Spotify")]
     public AppStateManager appStateManager;
     public SpotifyController spotifyController;
 
     [Header("AI Integration")]
-    public Meta.XR.BuildingBlocks.AIBlocks.TextToSpeechAgent ttsAgent;
+    public TextToSpeechAgent ttsAgent; 
 
     [Header("Controls")]
     public InputActionReference rightThumbstickClick;
@@ -29,7 +35,6 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     private bool wasPressingThumbstick = false;
 
-    // --- CONNECTION FIX: Added Delayed Connect to prevent Socket errors ---
     protected override void Start()
     {
         StartCoroutine(DelayedConnect());
@@ -73,7 +78,19 @@ public class MqttQuestBridge : M2MqttUnityClient
 
     private void ActivateRika()
     {
-        if (rikaAgent != null) rikaAgent.Materialize();
+        if (rikaAgent != null) 
+        {
+            rikaAgent.Materialize();
+            
+            // --- NEW: Force her to walk/fly to the player! ---
+            RikaWander wanderScript = rikaAgent.GetComponent<RikaWander>();
+            if (wanderScript != null && playerHead != null)
+            {
+                Debug.Log("Summoning Rika to the player!");
+                wanderScript.WalkToPlayer(playerHead);
+            }
+        }
+
         if (client != null && client.IsConnected)
             client.Publish("rika/voice/listen", Encoding.UTF8.GetBytes("start"), MqttMsgBase.QOS_LEVEL_AT_MOST_ONCE, false);
     }
@@ -91,7 +108,6 @@ public class MqttQuestBridge : M2MqttUnityClient
             client.Publish("rika/app/switch", Encoding.UTF8.GetBytes(appState), MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
     }
 
-    // --- INTEGRATED GEMINI MANAGER METHODS ---
     public void OnTranscriptionReceived(string transcript)
     {
         if (string.IsNullOrWhiteSpace(transcript)) return;
@@ -121,7 +137,6 @@ public class MqttQuestBridge : M2MqttUnityClient
         });
     }
 
-    // --- HELPER METHODS ---
     public void PublishSpotifyCommand(string command)
     {
         PublishToTopic("rika/haos/spotify/toggle", command);
